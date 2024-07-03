@@ -10,16 +10,20 @@
 #include <vector>
 #include "control_functions.h"
 
-void send_lightcolor22(const std::string& targetIP, int targetPort, int pixelNum, std::vector<unsigned char> color_input) {
+
+// void send_lightcolor22(const std::string& targetIP, int targetPort, int pixelNum, std::vector<unsigned char> color_input) {
+extern "C" void send_controllight_oneframe(wchar_t* targetIP, int targetPort, 
+                                            int** colorarray, int rows, int cols) {
+
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        std::cerr << "Failed to initialize Winsock" << std::endl;
+        std::wcerr << L"Failed to initialize Winsock" << std::endl;
         return;
     }
 
     SOCKET sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd == INVALID_SOCKET) {
-        std::cerr << "Failed to create socket" << std::endl;
+        std::wcerr << L"Failed to create socket" << std::endl;
         WSACleanup();
         return;
     }
@@ -28,8 +32,10 @@ void send_lightcolor22(const std::string& targetIP, int targetPort, int pixelNum
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_port = htons(targetPort);
-    if (inet_pton(AF_INET, targetIP.c_str(), &(servaddr.sin_addr)) <= 0) {
-        std::cerr << "Failed to set up server address" << std::endl;
+
+    // Use InetPtonW for wide character strings
+    if (InetPtonW(AF_INET, targetIP, &(servaddr.sin_addr)) != 1) {
+        std::wcerr << L"Failed to set up server address" << std::endl;
         closesocket(sockfd);
         WSACleanup();
         return;
@@ -48,7 +54,7 @@ void send_lightcolor22(const std::string& targetIP, int targetPort, int pixelNum
         command.push_back(static_cast<unsigned char>(dis(gen)));
     }
 
-    int controllength = 24 * pixelNum;
+    int controllength = 24 * rows * cols;
     int validlength = controllength + 9;
 
 
@@ -79,33 +85,39 @@ void send_lightcolor22(const std::string& targetIP, int targetPort, int pixelNum
     command.push_back(static_cast<unsigned char>((controllength >> 8) & 0xFF));
     command.push_back(static_cast<unsigned char>(controllength & 0xFF));
 
-    for (int i = 0; i < color_input.size(); ++i){
-        // Green
-        if (color_input[i] == 0) {
-            for (int i = 0; i < 8; ++i) command.push_back(0xff);
-            for (int i = 0; i < 16; ++i) command.push_back(0x00);
-        }
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < cols; ++j) {
+            // Green
+            if (colorarray[i][j] == 0) {
+                for (int k = 0; k < 8; ++k) command.push_back(0xff);
+                for (int k = 0; k < 16; ++k) command.push_back(0x00);
+            }
+            // Red
+            else if (colorarray[i][j] == 1) {
+                for (int k = 0; k < 8; ++k) command.push_back(0x00);
+                for (int k = 0; k < 8; ++k) command.push_back(0xff);
+                for (int k = 0; k < 8; ++k) command.push_back(0x00);
+            }
+            // Blue
+            else if (colorarray[i][j] == 2) {
+                for (int k = 0; k < 16; ++k) command.push_back(0x00);
+                for (int k = 0; k < 8; ++k) command.push_back(0xff);
+            }
+            // Yellow
+            else if (colorarray[i][j] == 3) {
+                for (int k = 0; k < 8; ++k) command.push_back(0xff);
+                for (int k = 0; k < 8; ++k) command.push_back(0xff);
+                for (int k = 0; k < 8; ++k) command.push_back(0x00);
+            }
 
-        // Red
-        else if (color_input[i] == 1) {
-            for (int i = 0; i < 8; ++i) command.push_back(0x00);
-            for (int i = 0; i < 8; ++i) command.push_back(0xff);
-            for (int i = 0; i < 8; ++i) command.push_back(0x00);
+            // White
+            else if (colorarray[i][j] == 4) {
+                for (int k = 0; k < 8; ++k) command.push_back(0x00);
+                for (int k = 0; k < 8; ++k) command.push_back(0x00);
+                for (int k = 0; k < 8; ++k) command.push_back(0x00);
+            }
         }
-
-        // Blue
-        else if (color_input[i] == 2) {
-            for (int i = 0; i < 16; ++i) command.push_back(0x00);
-            for (int i = 0; i < 8; ++i) command.push_back(0xff);
-        }
-
-        // Yellow
-        else if (color_input[i] == 3) {
-            for (int i = 0; i < 8; ++i) command.push_back(0xff);
-            for (int i = 0; i < 8; ++i) command.push_back(0xff);
-            for (int i = 0; i < 8; ++i) command.push_back(0x00);
-        }
-    }
+}
 
     // // G1 - G4
     // for (int i = 0; i < 4; ++i) command.push_back(0xff);
@@ -135,12 +147,13 @@ void send_lightcolor22(const std::string& targetIP, int targetPort, int pixelNum
         return;
     }
 
-    // print the message in hexcdecimal
+    // // print the message in hexcdecimal
     // std::cout << "Control Lights message: ";
     // for (char c : command) {
     //     std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(static_cast<unsigned char>(c)) << " ";
     // }
     // std::cout << std::endl;
+
 
     closesocket(sockfd);
     WSACleanup();

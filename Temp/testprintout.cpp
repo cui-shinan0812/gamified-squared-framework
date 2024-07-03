@@ -42,13 +42,13 @@ int main() {
             }
         }
 
-        send_startframe(targetIP, targetPort);
+        send_startframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
 
-        send_controlnum(targetIP, targetPort, 4);
+        send_controlnum(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, 4);
 
-        send_lightcolor22(targetIP, targetPort, 4, color_input);
+       send_randomlight22(targetIP, targetPort, 4);
 
-        send_endframe(targetIP, targetPort);
+        send_endframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
 
         // Call the receiveMessage function with the buffer array
         std::vector<unsigned char> receivedData = receiveMessage(localPort, bufferSize);
@@ -61,7 +61,6 @@ int main() {
         // get receivedData 4th to 7th byte
         std::vector<unsigned char> receivedData2(receivedData.begin() + 4, receivedData.begin() + 8);
 
-        Sleep(1000);
     }
 
 }

@@ -6,6 +6,7 @@
 #include <vector>
 
 std::vector<unsigned char> receiveMessage(int localPort, int bufferSize) {
+
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
         std::cerr << "Failed to initialize winsock" << std::endl;
@@ -35,6 +36,7 @@ std::vector<unsigned char> receiveMessage(int localPort, int bufferSize) {
     std::vector<unsigned char> buffer(bufferSize, 0);
 
     std::cout << "Waiting for broadcast message..." << std::endl;
+
 
     while (true) {
         sockaddr_in senderAddr;

@@ -10,16 +10,16 @@
 #include <vector>
 #include "control_functions.h"
 
-void send_controlnum(const std::string& targetIP, int targetPort, int pixelNum) {
+extern "C" void send_controlnum(wchar_t* targetIP, int targetPort, int pixelNum) {
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        std::cerr << "Failed to initialize Winsock" << std::endl;
+        std::wcerr << L"Failed to initialize Winsock" << std::endl;
         return;
     }
 
     SOCKET sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd == INVALID_SOCKET) {
-        std::cerr << "Failed to create socket" << std::endl;
+        std::wcerr << L"Failed to create socket" << std::endl;
         WSACleanup();
         return;
     }
@@ -28,8 +28,10 @@ void send_controlnum(const std::string& targetIP, int targetPort, int pixelNum) 
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_port = htons(targetPort);
-    if (inet_pton(AF_INET, targetIP.c_str(), &(servaddr.sin_addr)) <= 0) {
-        std::cerr << "Failed to set up server address" << std::endl;
+
+    // Use InetPtonW for wide character strings
+    if (InetPtonW(AF_INET, targetIP, &(servaddr.sin_addr)) != 1) {
+        std::wcerr << L"Failed to set up server address" << std::endl;
         closesocket(sockfd);
         WSACleanup();
         return;
@@ -144,7 +146,7 @@ void send_controlnum(const std::string& targetIP, int targetPort, int pixelNum) 
         return;
     }
 
-    // print the message in hexadecimal
+    // // print the message in hexadecimal
     // std::cout << "Tell control numbers message: ";
     // for (auto c : command) {
     //     std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(c) << " ";
