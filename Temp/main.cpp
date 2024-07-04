@@ -20,7 +20,6 @@ int main() {
     int depth = 100;
 
     
-
     int*** colorarray = new int**[rows];
     for (int i = 0; i < rows; ++i) {
         colorarray[i] = new int*[cols];
@@ -50,14 +49,13 @@ int main() {
 
         // [1][2]
         // [4][3]
-        
-
-        // Convert targetIP to wide string and send the frame
+    
         send_startframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
         send_controlnum(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, 4);
         send_controllight_oneframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, frame, rows, cols);
         send_endframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
         Sleep(500);
+
 
         std::vector<unsigned char> receivedData = receiveMessage(localPort, bufferSize);
 
@@ -78,7 +76,7 @@ int main() {
         // if receivedData_modified has value not equal to 0x00, give the position of the value
         for (int i = 0; i < rows; ++i) {
             for (int j = 0; j < cols; ++j) {
-                if (reshapedreceivedData_modified[i][j] != 0x00) {
+                if (reshapedreceivedData_modified[i][j] != 0x00 && frame[i][j] != 4) {
                     frame[i][j] = 3;
                     iftouch = true;
                 }
@@ -111,7 +109,7 @@ int main() {
         else {
             Sleep(2000);
         }
-        
+    
 
         // Free the memory allocated for the temporary frame
         for (int i = 0; i < rows; ++i) {

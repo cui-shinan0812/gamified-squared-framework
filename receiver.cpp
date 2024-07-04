@@ -6,7 +6,6 @@
 #include <vector>
 
 std::vector<unsigned char> receiveMessage(int localPort, int bufferSize) {
-
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
         std::cerr << "Failed to initialize winsock" << std::endl;
@@ -37,6 +36,14 @@ std::vector<unsigned char> receiveMessage(int localPort, int bufferSize) {
 
     std::cout << "Waiting for broadcast message..." << std::endl;
 
+    // Set the socket to non-blocking mode
+    u_long mode = 1;
+    if (ioctlsocket(sockfd, FIONBIO, &mode) != 0) {
+        std::cerr << "Failed to set socket to non-blocking mode" << std::endl;
+        closesocket(sockfd);
+        WSACleanup();
+        return {};
+    }
 
     while (true) {
         sockaddr_in senderAddr;
@@ -44,15 +51,17 @@ std::vector<unsigned char> receiveMessage(int localPort, int bufferSize) {
 
         int numBytesReceived = recvfrom(sockfd, reinterpret_cast<char*>(buffer.data()), bufferSize - 1, 0, (struct sockaddr*)&senderAddr, &senderAddrLen);
         if (numBytesReceived == SOCKET_ERROR) {
-            std::cerr << "Failed to receive broadcast message" << std::endl;
+            int error = WSAGetLastError();
+            if (error != WSAEWOULDBLOCK) {
+                std::cerr << "Failed to receive broadcast message: " << error << std::endl;
+            }
+            // Handle other tasks or continue listening
+        }
+        else {
+            buffer.resize(numBytesReceived);  // Resize the buffer to the actual number of received bytes
             closesocket(sockfd);
             WSACleanup();
-            return {};
+            return buffer;  // Return the received data as a vector
         }
-
-        closesocket(sockfd);
-        WSACleanup();
-        buffer.resize(numBytesReceived);  // Resize the buffer to the actual number of received bytes
-        return buffer;  // Return the received data as a vector
     }
 }
