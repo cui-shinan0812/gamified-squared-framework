@@ -25,7 +25,8 @@ int main() {
 
     // For counting down
     // Set the duration in seconds
-    int duration = 2;
+    float duration = 5;
+    float duration_yellow = 0.3;
 
     
     int*** colorarray = new int**[rows];
@@ -43,150 +44,154 @@ int main() {
 
     int frame_no = 0;
 
+
     // write a while loop untill time equals to depth
     while (frame_no < depth) {
 
-    // Create a temporary 2D array of colorarry in depth = 0
-    int** frame = new int*[rows];
-    for (int i = 0; i < rows; ++i) {
-        frame[i] = new int[cols];
-        for (int j = 0; j < cols; ++j) {
-            frame[i][j] = colorarray[i][j][frame_no];
-        }
-    }
-
-
-    // Get the current time
-    auto startTime = std::chrono::steady_clock::now();
-
-    while (true) {
-        send_startframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
-        send_controlnum(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, 4);
-        send_controllight_oneframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, frame, rows, cols);
-        send_endframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
-
-        std::vector<unsigned char> receivedMessage = startUDPServer(localPort, bufferSize);
-        std::vector<unsigned char> receivedData_modified(receivedMessage.begin() + 3, receivedMessage.begin() + 7);
-        // print the receivedData_modified
-        for (int i = 0; i < receivedData_modified.size(); ++i) {
-            std::cout << std::hex << static_cast<int>(receivedData_modified[i]) << " ";
-        }
-
-        // Reshape the receivedData_modified to same size as the frame
-        std::vector<std::vector<unsigned char>> reshapedreceivedData_modified(rows, std::vector<unsigned char>(cols));
-
-        for (int i = 0, k = 0; i < rows; ++i) {
-            for (int j = 0; j < cols; ++j, ++k) {
-                reshapedreceivedData_modified[i][j] = receivedData_modified[k];
+        // Create a temporary 2D array of colorarry in depth = 0
+        int** frame = new int*[rows];
+        for (int i = 0; i < rows; ++i) {
+            frame[i] = new int[cols];
+            for (int j = 0; j < cols; ++j) {
+                frame[i][j] = colorarray[i][j][frame_no];
             }
         }
 
-        // if receivedData_modified has value not equal to 0x00, give the position of the value
+        // Create a temporary 2D array of with all value inside are bool false
+        bool** step_state = new bool*[rows];
         for (int i = 0; i < rows; ++i) {
+            step_state[i] = new bool[cols];
             for (int j = 0; j < cols; ++j) {
-                if (reshapedreceivedData_modified[i][j] != 0x00 && frame[i][j] != 4) {
-                    frame[i][j] = 3;
+                step_state[i][j] = false;
+            }
+        }
+
+        std::chrono::steady_clock::time_point** step_start_time = new std::chrono::steady_clock::time_point*[rows];
+        for (int i = 0; i < rows; ++i) {
+            step_start_time[i] = new std::chrono::steady_clock::time_point[cols]{std::chrono::steady_clock::time_point()};
+        }
+
+        int step_row = 0;
+        int step_col = 0;
+
+        // Get the current time
+        auto startTime = std::chrono::steady_clock::now();
+        
+
+        int counter = 0;
+        while (true) {
+            counter++;
+            send_startframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
+            send_controlnum(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, 4);
+            send_controllight_oneframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, frame, rows, cols);
+            send_endframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
+
+            std::vector<unsigned char> receivedMessage = startUDPServer(localPort, bufferSize);
+
+            std::vector<unsigned char> receivedData_modified(receivedMessage.begin() + 3, receivedMessage.begin() + 7);
+            // // print the receivedData_modified
+            // for (int i = 0; i < receivedData_modified.size(); ++i) {
+            //     std::cout << std::hex << static_cast<int>(receivedData_modified[i]) << " ";
+            // }
+ 
+            // Reshape the receivedData_modified to same size as the frame
+            std::vector<std::vector<unsigned char>> reshapedreceivedData_modified(rows, std::vector<unsigned char>(cols));
+
+            for (int i = 0, k = 0; i < rows; ++i) {
+                for (int j = 0; j < cols; ++j, ++k) {
+                    reshapedreceivedData_modified[i][j] = receivedData_modified[k];
                 }
             }
+
+            // if receivedData_modified has value not equal to 0x00, give the position of the value
+            for (int i = 0; i < rows; ++i) {
+                for (int j = 0; j < cols; ++j) {
+                    // if (reshapedreceivedData_modified[i][j] != 0x00 && frame[i][j] != 4 && step_state[i][j] == false) {
+                    if (reshapedreceivedData_modified[i][j] != 0x00 && step_state[i][j] == false) {
+                        auto yellowstepTime = std::chrono::steady_clock::now();
+                        step_start_time[i][j] = yellowstepTime;
+
+                        // change it to yellow
+                        frame[i][j] = 3;
+
+                        // state the position of the yellow
+                        step_row = i;
+                        step_col = j;
+
+                        // change the state of already stepped to true
+                        step_state[i][j] = true;
+                    }
+                }
+            }
+
+            // // record the time how long the yellow stay in the position
+            // auto currentTime_yellow = std::chrono::steady_clock::now();
+            // auto elapsed_yellow = std::chrono::duration_cast<std::chrono::seconds>(currentTime_yellow - step_start_time[step_row][step_col]);
+            // if (elapsed_yellow.count() >= duration_yellow && step_state[step_row][step_col] == true) {
+            //     // change the yellow to shut down
+            //     frame[step_row][step_col] = 4;
+            //     // send the shut down frame
+            //     send_startframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
+            //     send_controlnum(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, 4);
+            //     send_controllight_oneframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, frame, rows, cols);
+            //     send_endframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
+            //     // print "shut down the yellow"
+            //     std :: cout << "shut down the yellow" << std::endl;
+            //     break;
+            // }
+
+            // check all the value in step_start_time
+            for (int i = 0; i < rows; ++i) {
+                for (int j = 0; j < cols; ++j) {
+                    // check if step_state is 0
+                    if (step_start_time[i][j] == std::chrono::steady_clock::time_point()) {
+                        continue;
+                    }
+                    // record the time how long the yellow stay in the position
+                    auto currentTime_yellow = std::chrono::steady_clock::now();
+                    auto elapsed_yellow = std::chrono::duration_cast<std::chrono::seconds>(currentTime_yellow - step_start_time[i][j]);
+                    if (elapsed_yellow.count() >= duration_yellow && step_state[i][j] == true) {
+                        // change the yellow to shut down
+                        frame[i][j] = 4;
+                        // send the shut down frame
+                        send_startframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
+                        send_controlnum(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, 4);
+                        send_controllight_oneframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, frame, rows, cols);
+                        send_endframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
+                        // // print "shut down the yellow"
+                        // std :: cout << "shut down the yellow" << std::endl;
+                        step_start_time[i][j] = std::chrono::steady_clock::time_point();
+                    }
+                }
+            }
+
+
+            // // send the yellow frame
+            // send_startframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
+            // send_controlnum(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, 4);
+            // send_controllight_oneframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, frame, rows, cols);
+            // send_endframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
+            // // print "change to yellow"
+            
+
+            // Check if the frame duration has passed
+            auto currentTime = std::chrono::steady_clock::now();
+            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime);
+
+            if (elapsed.count() >= duration) {
+                std::cout << "\n\nbreak:  " << counter << "\n\n";
+                counter = 0;
+                break;
+
+            }
+
+        
         }
 
-        // change it to yellow
-        send_startframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
-        send_controlnum(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, 4);
-        send_controllight_oneframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, frame, rows, cols);
-        send_endframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
-
-        // for (int i = 0; i < rows; ++i) {
-        //         for (int j = 0; j < cols; ++j) {
-        //             if (frame[i][j] == 3) {
-        //                 frame[i][j] = 4;
-        //             }
-        //         }
-        //     }
-
-        
-        
-        // send_startframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
-        // send_controlnum(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, 4);
-        // send_controllight_oneframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, frame, rows, cols);
-        // send_endframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
-
-
-        // Check if the desired duration has passed
-        auto currentTime = std::chrono::steady_clock::now();
-        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime);
-
-        if (elapsed.count() >= duration)
-            break;
-    
-    }
-
-    frame_no++;
+        frame_no++;
 
     }
 
-        // [1][2]
-        // [4][3]
-    
-        // send_startframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
-        // send_controlnum(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, 4);
-        // send_controllight_oneframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, frame, rows, cols);
-        // send_endframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
-        // Sleep(500);
-
-
-    //     std::vector<unsigned char> receivedData = receiveMessage(localPort, bufferSize);
-
-    //     std::vector<unsigned char> receivedData_modified(receivedData.begin() + 3, receivedData.begin() + 7);
-
-    //     // Reshape the receivedData_modified to same size as the frame
-    //     std::vector<std::vector<unsigned char>> reshapedreceivedData_modified(rows, std::vector<unsigned char>(cols));
-
-    //     for (int i = 0, k = 0; i < rows; ++i) {
-    //         for (int j = 0; j < cols; ++j, ++k) {
-    //             reshapedreceivedData_modified[i][j] = receivedData_modified[k];
-    //         }
-    //     }
-        
-    //     // create a bool value if true or not
-    //     bool iftouch = false;
-
-    //     // if receivedData_modified has value not equal to 0x00, give the position of the value
-    //     for (int i = 0; i < rows; ++i) {
-    //         for (int j = 0; j < cols; ++j) {
-    //             if (reshapedreceivedData_modified[i][j] != 0x00 && frame[i][j] != 4) {
-    //                 frame[i][j] = 3;
-    //                 iftouch = true;
-    //             }
-    //         }
-    //     }
-
-    //     if (iftouch) {
-    //         send_startframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
-    //         send_controlnum(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, 4);
-    //         send_controllight_oneframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, frame, rows, cols);
-    //         send_endframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
-    //         Sleep(1000);
-
-    //         // change the value of the frame to 4 if value inside the frame is equal to 3
-    //         for (int i = 0; i < rows; ++i) {
-    //             for (int j = 0; j < cols; ++j) {
-    //                 if (frame[i][j] == 3) {
-    //                     frame[i][j] = 4;
-    //                 }
-    //             }
-    //         }
-    //         send_startframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
-    //         send_controlnum(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, 4);
-    //         send_controllight_oneframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, frame, rows, cols);
-    //         send_endframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
-    //         Sleep(1000);
-            
-    //     } 
-
-    //     else {
-    //         Sleep(2000);
-    //     }
     
 
     //     // Free the memory allocated for the temporary frame
@@ -208,34 +213,5 @@ int main() {
     //     delete[] colorarray[i];
     // }
     // delete[] colorarray;
-
-    
-
-    // send_broadcast(targetPort);
-
-    // while (true) {
-    //     send_startframe(targetIP, targetPort);
-
-    //     send_controlnum(targetIP, targetPort, 4);
-
-    //     // send_controllight(targetIP, targetPort);
-    //     send_randomlight22(targetIP, targetPort, 4);
-
-    //     send_endframe(targetIP, targetPort);
-        
-    //     receiveMessage(localPort, bufferSize);
-    //     Sleep(1000);
-    // }
-
-
-    // send_startframe(targetIP, targetPort);
-
-    // send_controlnum(targetIP, targetPort, 1);
-
-    // send_randomlight22(targetIP, targetPort, 1);
-
-    // send_endframe(targetIP, targetPort);
-    // receiveMessage(localPort, bufferSize);
-
     return 0;
 }
