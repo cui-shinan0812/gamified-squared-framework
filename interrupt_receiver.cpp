@@ -7,7 +7,7 @@
 
 using namespace std;
 
-vector<unsigned char> startUDPServer(int port, int bufferSize) {
+vector<unsigned char> receiveMessage(int port, int bufferSize) {
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
     {
@@ -73,16 +73,3 @@ vector<unsigned char> startUDPServer(int port, int bufferSize) {
 
     return receivedData;
 }
-
-// int main()
-// {
-//     int port = 8200;
-//     int bufferSize = 3000;
-//     vector<unsigned char> receivedMessage = startUDPServer(port, bufferSize);
-//     for (unsigned char byte : receivedMessage)
-//     {
-//         cout << static_cast<int>(byte) << " ";
-//     }
-
-//     return 0;
-// }

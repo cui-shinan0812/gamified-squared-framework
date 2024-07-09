@@ -6,6 +6,7 @@
 #include <thread>
 #include <string>
 #include <vector>
+#include <csignal>
 
 int main() {
     std::string targetIP = "169.254.255.255";
@@ -43,7 +44,6 @@ int main() {
     send_broadcast(targetPort);
 
     int frame_no = 0;
-
 
     // write a while loop untill time equals to depth
     while (frame_no < depth) {
@@ -85,8 +85,9 @@ int main() {
             send_controlnum(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, 4);
             send_controllight_oneframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, frame, rows, cols);
             send_endframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
-
-            std::vector<unsigned char> receivedMessage = startUDPServer(localPort, bufferSize);
+            // Process the received message and perform the necessary actions
+            std::vector<unsigned char> receivedMessage = receiveMessage(localPort, bufferSize);
+                
 
             std::vector<unsigned char> receivedData_modified(receivedMessage.begin() + 3, receivedMessage.begin() + 7);
             // // print the receivedData_modified
@@ -107,7 +108,15 @@ int main() {
             for (int i = 0; i < rows; ++i) {
                 for (int j = 0; j < cols; ++j) {
                     // if (reshapedreceivedData_modified[i][j] != 0x00 && frame[i][j] != 4 && step_state[i][j] == false) {
-                    if (reshapedreceivedData_modified[i][j] != 0x00 && step_state[i][j] == false) {
+
+                    // step on blue tile and shut down
+                    if (reshapedreceivedData_modified[i][j] != 0x00 && step_state[i][j] == false && frame[i][j] == 2) {
+                        // turn it off
+                        frame[i][j] = 4;
+                    }
+
+                    // step on red tile and yellow will shark
+                    if (reshapedreceivedData_modified[i][j] != 0x00 && step_state[i][j] == false && frame[i][j] == 1) {
                         auto yellowstepTime = std::chrono::steady_clock::now();
                         step_start_time[i][j] = yellowstepTime;
 
@@ -124,22 +133,6 @@ int main() {
                 }
             }
 
-            // // record the time how long the yellow stay in the position
-            // auto currentTime_yellow = std::chrono::steady_clock::now();
-            // auto elapsed_yellow = std::chrono::duration_cast<std::chrono::seconds>(currentTime_yellow - step_start_time[step_row][step_col]);
-            // if (elapsed_yellow.count() >= duration_yellow && step_state[step_row][step_col] == true) {
-            //     // change the yellow to shut down
-            //     frame[step_row][step_col] = 4;
-            //     // send the shut down frame
-            //     send_startframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
-            //     send_controlnum(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, 4);
-            //     send_controllight_oneframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, frame, rows, cols);
-            //     send_endframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
-            //     // print "shut down the yellow"
-            //     std :: cout << "shut down the yellow" << std::endl;
-            //     break;
-            // }
-
             // check all the value in step_start_time
             for (int i = 0; i < rows; ++i) {
                 for (int j = 0; j < cols; ++j) {
@@ -147,12 +140,14 @@ int main() {
                     if (step_start_time[i][j] == std::chrono::steady_clock::time_point()) {
                         continue;
                     }
+
                     // record the time how long the yellow stay in the position
                     auto currentTime_yellow = std::chrono::steady_clock::now();
                     auto elapsed_yellow = std::chrono::duration_cast<std::chrono::seconds>(currentTime_yellow - step_start_time[i][j]);
                     if (elapsed_yellow.count() >= duration_yellow && step_state[i][j] == true) {
                         // change the yellow to shut down
                         frame[i][j] = 4;
+
                         // send the shut down frame
                         send_startframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
                         send_controlnum(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, 4);
@@ -165,15 +160,6 @@ int main() {
                 }
             }
 
-
-            // // send the yellow frame
-            // send_startframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
-            // send_controlnum(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, 4);
-            // send_controllight_oneframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, frame, rows, cols);
-            // send_endframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
-            // // print "change to yellow"
-            
-
             // Check if the frame duration has passed
             auto currentTime = std::chrono::steady_clock::now();
             auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime);
@@ -184,34 +170,10 @@ int main() {
                 break;
 
             }
-
-        
         }
 
         frame_no++;
 
     }
-
-    
-
-    //     // Free the memory allocated for the temporary frame
-    //     for (int i = 0; i < rows; ++i) {
-    //         delete[] frame[i];
-    //     }
-    //     delete[] frame;
-    // }
-
-
-
-        
-
-    // // Free the memory allocated for the 3D array
-    // for (int i = 0; i < rows; ++i) {
-    //     for (int j = 0; j < cols; ++j) {
-    //         delete[] colorarray[i][j];
-    //     }
-    //     delete[] colorarray[i];
-    // }
-    // delete[] colorarray;
     return 0;
 }

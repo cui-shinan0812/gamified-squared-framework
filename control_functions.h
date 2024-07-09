@@ -33,7 +33,7 @@ void send_randomlight22(const std::string& targetIP, int targetPort, int pixelNu
 
 // void ReceiveThread(int localPort, int bufferSize);
 
-std::vector<unsigned char> startUDPServer(int port, int bufferSize);
+std::vector<unsigned char> receiveMessage(int port, int bufferSize);
 
 void processFrame_yellow(int** frame, int rows, int cols, std::vector<unsigned char> receivedData_modified);
 
