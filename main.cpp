@@ -8,6 +8,13 @@
 #include <vector>
 #include <csignal>
 
+class LightInfo {
+public:
+    int*** colorarray;
+    std::chrono::steady_clock::time_point** step_start_time;
+    bool** step_state;
+};
+
 int main() {
     std::string targetIP = "169.254.255.255";
     // std::string targetIP = "169.254.169.94";
@@ -22,24 +29,46 @@ int main() {
     // Create a 3d dynamic array with random values from 0 to 2, with z-axis from 1-10
     int rows = 2;
     int cols = 2;
-    int depth = 100;
+    int depth = 10;
 
     // For counting down
     // Set the duration in seconds
     float duration = 5;
     float duration_yellow = 0.3;
 
+    // Create a light_info structure
+    LightInfo light_info;
     
-    int*** colorarray = new int**[rows];
+    light_info.colorarray = new int**[rows];
+    light_info.step_start_time = new std::chrono::steady_clock::time_point*[rows];
+    light_info.step_state = new bool*[rows];
     for (int i = 0; i < rows; ++i) {
-        colorarray[i] = new int*[cols];
+        light_info.colorarray[i] = new int*[cols];  // For LED all frames
+        light_info.step_state[i] = new bool[cols];  // For LED 2D step state
+        light_info.step_start_time[i] = new std::chrono::steady_clock::time_point[cols];    // For LED 2D step start time
+
         for (int j = 0; j < cols; ++j) {
-            colorarray[i][j] = new int[depth];
+            light_info.colorarray[i][j] = new int[depth];
+            light_info.step_state[i][j] = false;    // set all to be false
+            light_info.step_start_time[i][j] = std::chrono::steady_clock::time_point(); // set all to be 0
+
             for (int k = 0; k < depth; ++k) {
-                colorarray[i][j][k] = dis(gencolor);
+                light_info.colorarray[i][j][k] = dis(gencolor); // set the colorarray to be random
             }
         }
     }
+
+    
+    // int*** colorarray = new int**[rows];
+    // for (int i = 0; i < rows; ++i) {
+    //     colorarray[i] = new int*[cols];
+    //     for (int j = 0; j < cols; ++j) {
+    //         colorarray[i][j] = new int[depth];
+    //         for (int k = 0; k < depth; ++k) {
+    //             colorarray[i][j][k] = dis(gencolor);
+    //         }
+    //     }
+    // }
 
     send_broadcast(targetPort);
 
@@ -48,28 +77,14 @@ int main() {
     // write a while loop untill time equals to depth
     while (frame_no < depth) {
 
-        // Create a temporary 2D array of colorarry in depth = 0
-        int** frame = new int*[rows];
-        for (int i = 0; i < rows; ++i) {
-            frame[i] = new int[cols];
-            for (int j = 0; j < cols; ++j) {
-                frame[i][j] = colorarray[i][j][frame_no];
-            }
-        }
-
-        // Create a temporary 2D array of with all value inside are bool false
-        bool** step_state = new bool*[rows];
-        for (int i = 0; i < rows; ++i) {
-            step_state[i] = new bool[cols];
-            for (int j = 0; j < cols; ++j) {
-                step_state[i][j] = false;
-            }
-        }
-
-        std::chrono::steady_clock::time_point** step_start_time = new std::chrono::steady_clock::time_point*[rows];
-        for (int i = 0; i < rows; ++i) {
-            step_start_time[i] = new std::chrono::steady_clock::time_point[cols]{std::chrono::steady_clock::time_point()};
-        }
+        // // Create a temporary 2D array of colorarry in depth = 0
+        // int** frame = new int*[rows];
+        // for (int i = 0; i < rows; ++i) {
+        //     frame[i] = new int[cols];
+        //     for (int j = 0; j < cols; ++j) {
+        //         frame[i][j] = light_info.colorarray[i][j][frame_no];
+        //     }
+        // }
 
         int step_row = 0;
         int step_col = 0;
@@ -83,12 +98,13 @@ int main() {
             counter++;
             send_startframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
             send_controlnum(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, 4);
-            send_controllight_oneframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, frame, rows, cols);
+            send_controllight_oneframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, light_info.colorarray[frame_no], rows, cols);
             send_endframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
             // Process the received message and perform the necessary actions
             std::vector<unsigned char> receivedMessage = receiveMessage(localPort, bufferSize);
                 
-
+            // print "Signal received"
+            std::cout << "Signal received" << std::endl;
             std::vector<unsigned char> receivedData_modified(receivedMessage.begin() + 3, receivedMessage.begin() + 7);
             // // print the receivedData_modified
             // for (int i = 0; i < receivedData_modified.size(); ++i) {
@@ -110,25 +126,25 @@ int main() {
                     // if (reshapedreceivedData_modified[i][j] != 0x00 && frame[i][j] != 4 && step_state[i][j] == false) {
 
                     // step on blue tile and shut down
-                    if (reshapedreceivedData_modified[i][j] != 0x00 && step_state[i][j] == false && frame[i][j] == 2) {
+                    if (reshapedreceivedData_modified[i][j] != 0x00 && light_info.step_state[i][j] == false && light_info.colorarray[i][j][frame_no] == 2) {
                         // turn it off
-                        frame[i][j] = 4;
+                        light_info.colorarray[i][j][frame_no] = 4;
                     }
 
                     // step on red tile and yellow will shark
-                    if (reshapedreceivedData_modified[i][j] != 0x00 && step_state[i][j] == false && frame[i][j] == 1) {
+                    if (reshapedreceivedData_modified[i][j] != 0x00 && light_info.step_state[i][j] == false && light_info.colorarray[i][j][frame_no] == 1) {
                         auto yellowstepTime = std::chrono::steady_clock::now();
-                        step_start_time[i][j] = yellowstepTime;
+                        light_info.step_start_time[i][j] = yellowstepTime;
 
                         // change it to yellow
-                        frame[i][j] = 3;
+                        light_info.colorarray[i][j][frame_no] = 3;
 
                         // state the position of the yellow
                         step_row = i;
                         step_col = j;
 
                         // change the state of already stepped to true
-                        step_state[i][j] = true;
+                        light_info.step_state[i][j] = true;
                     }
                 }
             }
@@ -137,25 +153,25 @@ int main() {
             for (int i = 0; i < rows; ++i) {
                 for (int j = 0; j < cols; ++j) {
                     // check if step_state is 0
-                    if (step_start_time[i][j] == std::chrono::steady_clock::time_point()) {
+                    if (light_info.step_start_time[i][j] == std::chrono::steady_clock::time_point()) {
                         continue;
                     }
 
                     // record the time how long the yellow stay in the position
                     auto currentTime_yellow = std::chrono::steady_clock::now();
-                    auto elapsed_yellow = std::chrono::duration_cast<std::chrono::seconds>(currentTime_yellow - step_start_time[i][j]);
-                    if (elapsed_yellow.count() >= duration_yellow && step_state[i][j] == true) {
+                    auto elapsed_yellow = std::chrono::duration_cast<std::chrono::seconds>(currentTime_yellow - light_info.step_start_time[i][j]);
+                    if (elapsed_yellow.count() >= duration_yellow && light_info.step_state[i][j] == true) {
                         // change the yellow to shut down
-                        frame[i][j] = 4;
+                        light_info.colorarray[i][j][frame_no] = 4;
 
                         // send the shut down frame
                         send_startframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
                         send_controlnum(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, 4);
-                        send_controllight_oneframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, frame, rows, cols);
+                        send_controllight_oneframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, light_info.colorarray[frame_no], rows, cols);
                         send_endframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
                         // // print "shut down the yellow"
                         // std :: cout << "shut down the yellow" << std::endl;
-                        step_start_time[i][j] = std::chrono::steady_clock::time_point();
+                        light_info.step_start_time[i][j] = std::chrono::steady_clock::time_point();
                     }
                 }
             }
@@ -167,6 +183,17 @@ int main() {
             if (elapsed.count() >= duration) {
                 std::cout << "\n\nbreak:  " << counter << "\n\n";
                 counter = 0;
+
+                // resume the step state to false
+                for (int i = 0; i < rows; ++i) {
+                    for (int j = 0; j < cols; ++j) {
+                        light_info.step_state[i][j] = false;
+                    }
+                }
+
+                // print "break inner loop"
+                std::cout << "break inner loop" << std::endl;
+
                 break;
 
             }
@@ -174,6 +201,11 @@ int main() {
 
         frame_no++;
 
+        // print "success run a frame"
+        std::cout << "success run a frame" << std::endl;
+
     }
+    // print "end program"
+    std::cout << "end program" << std::endl;
     return 0;
 }
