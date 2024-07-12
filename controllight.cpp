@@ -10,10 +10,8 @@
 #include <vector>
 #include "control_functions.h"
 
-
-// void send_lightcolor22(const std::string& targetIP, int targetPort, int pixelNum, std::vector<unsigned char> color_input) {
-extern "C" void send_controllight_oneframe(wchar_t* targetIP, int targetPort, 
-                                            int** colorarray, int rows, int cols) {
+extern "C" void send_controllight_oneframe(wchar_t* targetIP, int targetPort, int controller_no, int port_no,
+                                            int* input_colorframe, int pixelNum) {
 
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -54,8 +52,8 @@ extern "C" void send_controllight_oneframe(wchar_t* targetIP, int targetPort,
         command.push_back(static_cast<unsigned char>(dis(gen)));
     }
 
-    int controllength = 24 * rows * cols;
-    int validlength = controllength + 9;
+    int controllength = 24 * pixelNum; // total length for light signal
+    int validlength = controllength + 9; // 有效長度
 
 
     // Add 有效長度 len(PC/控制 + 數據), 2B
@@ -67,11 +65,13 @@ extern "C" void send_controllight_oneframe(wchar_t* targetIP, int targetPort,
     // Add PC
     command.push_back(0x02);
 
-    // Add 數據
-    command.push_back(0x00); // 數據1, 主控制編號
+    // Add 數據, Controller Number
+    command.push_back(static_cast<unsigned char>(controller_no));
+    // command.push_back(0x00); // 數據1, 主控制編號
 
-    // 數據2
-    command.push_back(0x00); 
+    // 數據2, port number
+    command.push_back(static_cast<unsigned char>(port_no));
+    // command.push_back(0x00); 
 
     // 數據3 (3 - 4), 表示數據幀
     command.push_back(0x88);
@@ -85,39 +85,37 @@ extern "C" void send_controllight_oneframe(wchar_t* targetIP, int targetPort,
     command.push_back(static_cast<unsigned char>((controllength >> 8) & 0xFF));
     command.push_back(static_cast<unsigned char>(controllength & 0xFF));
 
-    for (int i = 0; i < rows; ++i) {
-        for (int j = 0; j < cols; ++j) {
-            // Green
-            if (colorarray[i][j] == 0) {
-                for (int k = 0; k < 8; ++k) command.push_back(0xff);
-                for (int k = 0; k < 16; ++k) command.push_back(0x00);
-            }
-            // Red
-            else if (colorarray[i][j] == 1) {
-                for (int k = 0; k < 8; ++k) command.push_back(0x00);
-                for (int k = 0; k < 8; ++k) command.push_back(0xff);
-                for (int k = 0; k < 8; ++k) command.push_back(0x00);
-            }
-            // Blue
-            else if (colorarray[i][j] == 2) {
-                for (int k = 0; k < 16; ++k) command.push_back(0x00);
-                for (int k = 0; k < 8; ++k) command.push_back(0xff);
-            }
-            // Yellow
-            else if (colorarray[i][j] == 3) {
-                for (int k = 0; k < 8; ++k) command.push_back(0xff);
-                for (int k = 0; k < 8; ++k) command.push_back(0xff);
-                for (int k = 0; k < 8; ++k) command.push_back(0x00);
-            }
-
-            // White
-            else if (colorarray[i][j] == 4) {
-                for (int k = 0; k < 8; ++k) command.push_back(0x00);
-                for (int k = 0; k < 8; ++k) command.push_back(0x00);
-                for (int k = 0; k < 8; ++k) command.push_back(0x00);
-            }
+    for (int i = 0; i < pixelNum; ++i) {
+        // Green
+        if (input_colorframe[i] == 0) {
+            for (int k = 0; k < 8; ++k) command.push_back(0xff);
+            for (int k = 0; k < 16; ++k) command.push_back(0x00);
         }
-}
+        // Red
+        else if (input_colorframe[i] == 1) {
+            for (int k = 0; k < 8; ++k) command.push_back(0x00);
+            for (int k = 0; k < 8; ++k) command.push_back(0xff);
+            for (int k = 0; k < 8; ++k) command.push_back(0x00);
+        }
+        // Blue
+        else if (input_colorframe[i] == 2) {
+            for (int k = 0; k < 16; ++k) command.push_back(0x00);
+            for (int k = 0; k < 8; ++k) command.push_back(0xff);
+        }
+        // Yellow
+        else if (input_colorframe[i] == 3) {
+            for (int k = 0; k < 8; ++k) command.push_back(0xff);
+            for (int k = 0; k < 8; ++k) command.push_back(0xff);
+            for (int k = 0; k < 8; ++k) command.push_back(0x00);
+        }
+
+        // Turn off
+        else if (input_colorframe[i] == 4) {
+            for (int k = 0; k < 8; ++k) command.push_back(0x00);
+            for (int k = 0; k < 8; ++k) command.push_back(0x00);
+            for (int k = 0; k < 8; ++k) command.push_back(0x00);
+        }
+    }
 
     // // G1 - G4
     // for (int i = 0; i < 4; ++i) command.push_back(0xff);
@@ -147,12 +145,12 @@ extern "C" void send_controllight_oneframe(wchar_t* targetIP, int targetPort,
         return;
     }
 
-    // // print the message in hexcdecimal
-    // std::cout << "Control Lights message: ";
-    // for (char c : command) {
-    //     std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(static_cast<unsigned char>(c)) << " ";
-    // }
-    // std::cout << std::endl;
+    // print the message in hexcdecimal
+    std::cout << "Control Lights message: ";
+    for (char c : command) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(static_cast<unsigned char>(c)) << " ";
+    }
+    std::cout << std::endl;
 
 
     closesocket(sockfd);

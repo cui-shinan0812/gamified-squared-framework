@@ -9,7 +9,7 @@
 #include <iomanip>
 #include "control_functions.h"
 
-extern "C" void send_endframe(wchar_t* targetIP, int targetPort) {
+extern "C" void send_endframe(wchar_t* targetIP, int targetPort, int controller_no, int port_no) {
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
         std::wcerr << L"Failed to initialize Winsock" << std::endl;
@@ -50,7 +50,33 @@ extern "C" void send_endframe(wchar_t* targetIP, int targetPort) {
     }
 
     // Add fixed bytes as per original structure
-    command.insert(command.end(), {0x00, 0x09, 0x02, 0x00, 0x00, 0x55, 0x66, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E});
+    // command.insert(command.end(), {0x00, 0x09, 0x02, 0x00, 0x00, 0x55, 0x66, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E});
+
+    // 有效長度
+    command.push_back(0x00);
+    command.push_back(0x09);
+
+    // PC or 控制機
+    command.push_back(0x02);
+
+    // Controller number
+    command.push_back(static_cast<unsigned char>(controller_no));
+
+    // Port number
+    command.push_back(static_cast<unsigned char>(port_no));
+    
+    // Start Frame
+    command.push_back(0x55);
+    command.push_back(0x66);
+
+    // Use 0x00 to fill the command
+    for (int i = 0; i < 4; ++i) {
+        command.push_back(0x00);
+    }
+
+    // Toatl length
+    command.push_back(0x00);
+    command.push_back(0x0E);
 
     // Calculate CRC and add it
     unsigned char checksum = Check_sum(command.data(), command.size());
@@ -64,12 +90,12 @@ extern "C" void send_endframe(wchar_t* targetIP, int targetPort) {
         return;
     }
 
-    // // Print the message in hexadecimal
-    // std::cout << "End Frame message: ";
-    // for (auto c : command) {
-    //     std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(c) << " ";
-    // }
-    // std::cout << std::endl;
+    // Print the message in hexadecimal
+    std::cout << "End Frame message: ";
+    for (auto c : command) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(c) << " ";
+    }
+    std::cout << std::endl;
 
     closesocket(sockfd);
     WSACleanup();

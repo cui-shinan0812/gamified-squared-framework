@@ -7,7 +7,7 @@
 
 using namespace std;
 
-vector<unsigned char> receiveMessage(int port, int bufferSize) {
+extern "C" vector<unsigned char> receiveMessage(int localport, int bufferSize) {
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
     {
@@ -37,7 +37,7 @@ vector<unsigned char> receiveMessage(int port, int bufferSize) {
     // Specifying the server address
     sockaddr_in serverAddress;
     serverAddress.sin_family = AF_INET;
-    serverAddress.sin_port = htons(port);
+    serverAddress.sin_port = htons(localport);
     serverAddress.sin_addr.s_addr = INADDR_ANY;
 
     // Binding socket

@@ -10,7 +10,9 @@
 #include <vector>
 #include "control_functions.h"
 
-extern "C" void send_controlnum(wchar_t* targetIP, int targetPort, int pixelNum) {
+extern "C" void send_controlnum(wchar_t* targetIP, int targetPort, int no_of_port_used, int* pixelNum_each_port,
+                                int controller_no, int port_no) {
+
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
         std::wcerr << L"Failed to initialize Winsock" << std::endl;
@@ -64,11 +66,11 @@ extern "C" void send_controlnum(wchar_t* targetIP, int targetPort, int pixelNum)
     command.push_back(0x02);
 
     // add 數據
-    // 數據1, 主控制編號
-    command.push_back(0x00);
+    // 數據1, Controller number
+    command.push_back(static_cast<unsigned char>(controller_no));
 
-    // 數據2
-    command.push_back(0x00);
+    // 數據2, Port number
+    command.push_back(static_cast<unsigned char>(port_no));
 
     // 數據3 (3 - 4),  表示數據幀
     command.push_back(0x88);
@@ -82,53 +84,65 @@ extern "C" void send_controlnum(wchar_t* targetIP, int targetPort, int pixelNum)
     command.push_back(0x00);
     command.push_back(0x10);
 
-    // Port 1 pixel number
+    // Each port pixel number
+    for (int i = 0; i < no_of_port_used; ++i) {
+        command.push_back(static_cast<unsigned char>((pixelNum_each_port[i] >> 8) & 0xFF));
+        command.push_back(static_cast<unsigned char>(pixelNum_each_port[i] & 0xFF));
+    }
+
+    // Fill in remaining 4 port pixel number with 0x00
+    for (int i = 0; i < 8 - no_of_port_used; ++i) {
+        command.push_back(0x00);
+        command.push_back(0x00);
+    }
+
+    // // Port 1 pixel number
+    // command.push_back(0x00);
+    // command.push_back(0x02);
+    // // command.push_back(static_cast<unsigned char>((pixelNum >> 8) & 0xFF));
+    // // command.push_back(static_cast<unsigned char>(pixelNum & 0xFF));
+
+    // // Port 2 pixel number
+    // // command.push_back(static_cast<unsigned char>((pixelNum >> 8) & 0xFF));
+    // // command.push_back(static_cast<unsigned char>(pixelNum & 0xFF));
+    // command.push_back(0x00);
+    // command.push_back(0x02);
+
+    // // Port 3 pixel number
+    // // command.push_back(static_cast<unsigned char>((pixelNum >> 8) & 0xFF));
+    // // command.push_back(static_cast<unsigned char>(pixelNum & 0xFF));
     // command.push_back(0x00);
     // command.push_back(0x00);
-    command.push_back(static_cast<unsigned char>((pixelNum >> 8) & 0xFF));
-    command.push_back(static_cast<unsigned char>(pixelNum & 0xFF));
 
-    // Port 2 pixel number
-    // command.push_back(static_cast<unsigned char>((pixelNum >> 8) & 0xFF));
-    // command.push_back(static_cast<unsigned char>(pixelNum & 0xFF));
-    command.push_back(0x00);
-    command.push_back(0x00);
-
-    // Port 3 pixel number
-    // command.push_back(static_cast<unsigned char>((pixelNum >> 8) & 0xFF));
-    // command.push_back(static_cast<unsigned char>(pixelNum & 0xFF));
-    command.push_back(0x00);
-    command.push_back(0x00);
-
-    // Port 4 pixel number
-    // command.push_back(static_cast<unsigned char>((pixelNum >> 8) & 0xFF));
-    // command.push_back(static_cast<unsigned char>(pixelNum & 0xFF));
-    command.push_back(0x00);
-    command.push_back(0x00);
+    // // Port 4 pixel number
+    // // command.push_back(static_cast<unsigned char>((pixelNum >> 8) & 0xFF));
+    // // command.push_back(static_cast<unsigned char>(pixelNum & 0xFF));
+    // command.push_back(0x00);
+    // command.push_back(0x00);
 
     // Port 5 pixel number
     // command.push_back(static_cast<unsigned char>((pixelNum >> 8) & 0xFF));
     // command.push_back(static_cast<unsigned char>(pixelNum & 0xFF));
-    command.push_back(0x00);
-    command.push_back(0x00);
+    // command.push_back(0x00);
+    // command.push_back(0x00);
 
-    // Port 6 pixel number
-    // command.push_back(static_cast<unsigned char>((pixelNum >> 8) & 0xFF));
-    // command.push_back(static_cast<unsigned char>(pixelNum & 0xFF));
-    command.push_back(0x00);
-    command.push_back(0x00);
+    // // Port 6 pixel number
+    // // command.push_back(static_cast<unsigned char>((pixelNum >> 8) & 0xFF));
+    // // command.push_back(static_cast<unsigned char>(pixelNum & 0xFF));
+    // command.push_back(0x00);
+    // command.push_back(0x00);
 
-    // Port 7 pixel number
-    // command.push_back(static_cast<unsigned char>((pixelNum >> 8) & 0xFF));
-    // command.push_back(static_cast<unsigned char>(pixelNum & 0xFF));
-    command.push_back(0x00);
-    command.push_back(0x00);
+    // // Port 7 pixel number
+    // // command.push_back(static_cast<unsigned char>((pixelNum >> 8) & 0xFF));
+    // // command.push_back(static_cast<unsigned char>(pixelNum & 0xFF));
+    // command.push_back(0x00);
+    // command.push_back(0x00);
 
-    // Port 8 pixel number
-    // command.push_back(static_cast<unsigned char>((pixelNum >> 8) & 0xFF));
-    // command.push_back(static_cast<unsigned char>(pixelNum & 0xFF));
-    command.push_back(0x00);
-    command.push_back(0x00);
+    // // Port 8 pixel number
+    // // command.push_back(static_cast<unsigned char>((pixelNum >> 8) & 0xFF));
+    // // command.push_back(static_cast<unsigned char>(pixelNum & 0xFF));
+    // command.push_back(0x00);
+    // command.push_back(0x00);
 
     // Total length
     command.push_back(0x00);
@@ -146,12 +160,12 @@ extern "C" void send_controlnum(wchar_t* targetIP, int targetPort, int pixelNum)
         return;
     }
 
-    // // print the message in hexadecimal
-    // std::cout << "Tell control numbers message: ";
-    // for (auto c : command) {
-    //     std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(c) << " ";
-    // }
-    // std::cout << std::endl;
+    // print the message in hexadecimal
+    std::cout << "Tell control numbers message: ";
+    for (auto c : command) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(c) << " ";
+    }
+    std::cout << std::endl;
 
     closesocket(sockfd);
     WSACleanup();
