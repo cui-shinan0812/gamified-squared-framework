@@ -11,7 +11,7 @@
 #include "control_functions.h"
 
 extern "C" void send_controllight_oneframe(wchar_t* targetIP, int targetPort, int controller_no, int port_no,
-                                            int* input_colorframe, int pixelNum) {
+                                            int** input_colorframe, int rows, int cols) {
 
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -52,7 +52,7 @@ extern "C" void send_controllight_oneframe(wchar_t* targetIP, int targetPort, in
         command.push_back(static_cast<unsigned char>(dis(gen)));
     }
 
-    int controllength = 24 * pixelNum; // total length for light signal
+    int controllength = 8 * 3 * rows; // total length for light signal
     int validlength = controllength + 9; // 有效長度
 
 
@@ -85,46 +85,119 @@ extern "C" void send_controllight_oneframe(wchar_t* targetIP, int targetPort, in
     command.push_back(static_cast<unsigned char>((controllength >> 8) & 0xFF));
     command.push_back(static_cast<unsigned char>(controllength & 0xFF));
 
-    for (int i = 0; i < pixelNum; ++i) {
-        // Green
-        if (input_colorframe[i] == 0) {
-            for (int k = 0; k < 8; ++k) command.push_back(0xff);
-            for (int k = 0; k < 16; ++k) command.push_back(0x00);
-        }
-        // Red
-        else if (input_colorframe[i] == 1) {
-            for (int k = 0; k < 8; ++k) command.push_back(0x00);
-            for (int k = 0; k < 8; ++k) command.push_back(0xff);
-            for (int k = 0; k < 8; ++k) command.push_back(0x00);
-        }
-        // Blue
-        else if (input_colorframe[i] == 2) {
-            for (int k = 0; k < 16; ++k) command.push_back(0x00);
-            for (int k = 0; k < 8; ++k) command.push_back(0xff);
-        }
-        // Yellow
-        else if (input_colorframe[i] == 3) {
-            for (int k = 0; k < 8; ++k) command.push_back(0xff);
-            for (int k = 0; k < 8; ++k) command.push_back(0xff);
-            for (int k = 0; k < 8; ++k) command.push_back(0x00);
+
+    // command.insert(command.end(), {0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    //                                 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+    //                                 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
+
+    // command.insert(command.end(), {0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    //                                 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+    //                                 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
+
+    // command.insert(command.end(), {0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00,
+    //                                 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 
+    //                                 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00});
+
+    // command.insert(command.end(), {0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00,
+    //                                 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 
+    //                                 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00});
+
+    // Create vectors for color use
+    std::vector<unsigned char> green = {0xff, 0x00, 0x00};
+    std::vector<unsigned char> red = {0x00, 0xff, 0x00};
+    std::vector<unsigned char> blue = {0x00, 0x00, 0xff};
+    std::vector<unsigned char> yellow = {0xff, 0xff, 0x00};
+    std::vector<unsigned char> turnoff = {0x00, 0x00, 0x00};
+
+    // Create a vector for the results use
+    std::vector<unsigned char> resultcolor;
+
+    // Create color length
+    int colorlength = 3;
+
+    for (int i = 0; i < rows; i++) {
+        // Create a vector for the results use
+        std::vector<unsigned char> tempcolor;
+
+        for (int loop = 0; loop < colorlength; loop++) {
+            // Create a vector for the results use
+            std::vector<unsigned char> tempcolor_orignal; // ff ff 00 00
+
+                for (int j = 0; j < cols; j++) {
+                    // Green
+                    if (input_colorframe[i][j] == 0) {
+                        tempcolor_orignal.push_back(green[loop]);
+                        // std::cout << input_colorframe[i][j];
+
+                        // print row_num and col_num
+                        // std::cout << i << " " << j << std::endl;
+                    }
+                    // Red
+                    else if (input_colorframe[i][j] == 1) {
+                        tempcolor_orignal.push_back(red[loop]);
+                        // std::cout << input_colorframe[i][j];
+                        
+                        // print row_num and col_num
+                        // std::cout << i << " " << j << std::endl;
+                    }
+                    // Blue
+                    else if (input_colorframe[i][j] == 2) {
+                        tempcolor_orignal.push_back(blue[loop]);
+                        // std::cout << input_colorframe[i][j];
+                        
+                        // print row_num and col_num
+                        // std::cout << i << " " << j << std::endl;
+                    }
+                    // Yellow
+                    else if (input_colorframe[i][j] == 3) {
+                        tempcolor_orignal.push_back(yellow[loop]);
+                        // std::cout << input_colorframe[i][j];
+                        
+                        // print row_num and col_num
+                        // std::cout << i << " " << j << std::endl;
+                    }
+
+                    else if (input_colorframe[i][j] == 4) {
+                        tempcolor_orignal.push_back(turnoff[loop]);
+                        // std::cout << input_colorframe[i][j];
+                        
+                        // print row_num and col_num
+                        // std::cout << i << " " << j << std::endl;
+                    }
+                }
+
+                tempcolor_orignal.push_back(0x00);
+                tempcolor_orignal.push_back(0x00);
+                tempcolor_orignal.push_back(0x00);
+                tempcolor_orignal.push_back(0x00);
+
+                // // print tempcolor_orignal
+                // for (char c : tempcolor_orignal) {
+                //     std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(static_cast<unsigned char>(c)) << " ";
+                // }
+                // // print endl
+                // std::cout << std::endl;
+
+                // push the tempcolor to the resultcolor
+                tempcolor.insert(tempcolor.end(), tempcolor_orignal.begin(), tempcolor_orignal.end());
+            }
+
+            // // print tempcolor
+            // for (char c : tempcolor) {
+            //     std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(static_cast<unsigned char>(c)) << " ";
+            // }
+
+            // push the tempcolor to the resultcolor
+             resultcolor.insert(resultcolor.end(), tempcolor.begin(), tempcolor.end());
         }
 
-        // Turn off
-        else if (input_colorframe[i] == 4) {
-            for (int k = 0; k < 8; ++k) command.push_back(0x00);
-            for (int k = 0; k < 8; ++k) command.push_back(0x00);
-            for (int k = 0; k < 8; ++k) command.push_back(0x00);
-        }
-    }
+    // // print resultcolor
+    // for (char c : resultcolor) {
+    //     std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(static_cast<unsigned char>(c)) << " ";
+    // }
 
-    // // G1 - G4
-    // for (int i = 0; i < 4; ++i) command.push_back(0xff);
-
-    // // R1 - R4
-    // for (int i = 0; i < 4; ++i) command.push_back(0x00);
-
-    // // B1 - B4
-    // for (int i = 0; i < 4; ++i) command.push_back(0x00);
+    // Add the result color to the command
+    command.insert(command.end(), resultcolor.begin(), resultcolor.end());
 
     // Total length
     int totalLength = command.size() + 1;

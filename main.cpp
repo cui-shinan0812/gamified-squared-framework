@@ -13,15 +13,15 @@ int main() {
     int total_receiver_no = 1;
     
     // Create a Controller Object
-    ControllerInfo controller_1;
-    controller_1.targetIP = "169.254.255.255";
-    controller_1.targetPort = 4628;
-    controller_1.controller_no = 1;
-    controller_1.num_of_port_used = 4;
-    controller_1.total_pixel = 16;
-    controller_1.port_pixelNum = new int[controller_1.num_of_port_used];
-    for (int i = 0; i < controller_1.num_of_port_used; ++i) {
-        controller_1.port_pixelNum[i] = 4;    // 4*4 tiles
+    ControllerInfo controller_0;
+    controller_0.targetIP = "169.254.255.255";
+    controller_0.targetPort = 4628;
+    controller_0.controller_no = 0;
+    controller_0.num_of_port_used = 4;
+    controller_0.total_pixel = 16;
+    controller_0.port_pixelNum = new int[controller_0.num_of_port_used];
+    for (int i = 0; i < controller_0.num_of_port_used; ++i) {
+        controller_0.port_pixelNum[i] = 4;    // 4*4 tiles
     }
 
     // Create a Receiver Object
@@ -37,7 +37,7 @@ int main() {
     LightInfo light_info;
     light_info.rows = 4;
     light_info.cols = 4;
-    light_info.depth = 100;
+    light_info.depth = 1;
     light_info.frame_duration = 5;
     light_info.duration_yellow = 0.3;
     light_info.colorarray = new int**[light_info.depth];
@@ -51,9 +51,19 @@ int main() {
             light_info.colorarray[d][i] = new int[light_info.cols];
             for (int j = 0; j < light_info.cols; ++j) {
                 light_info.colorarray[d][i][j] = dis(gencolor);
+                // light_info.colorarray[d][i][j] =3;
             }
         }
     }
+
+    /*
+
+    light_info.colorarray[0][0][0] = 0; light_info.colorarray[0][0][1] = 3; light_info.colorarray[0][0][2] = 0; light_info.colorarray[0][0][3] = 3;
+    light_info.colorarray[0][1][0] = 0; light_info.colorarray[0][1][1] = 3; light_info.colorarray[0][1][2] = 0; light_info.colorarray[0][1][3] = 3;
+    light_info.colorarray[0][2][0] = 0; light_info.colorarray[0][2][1] = 3; light_info.colorarray[0][2][2] = 0; light_info.colorarray[0][2][3] = 3;
+    light_info.colorarray[0][3][0] = 0; light_info.colorarray[0][3][1] = 3; light_info.colorarray[0][3][2] = 0; light_info.colorarray[0][3][3] = 3;
+
+    */
 
     for (int i = 0; i < light_info.rows; ++i) {
         light_info.step_state[i] = new bool[light_info.cols];  // For LED 2D step state
@@ -66,7 +76,7 @@ int main() {
     }
 
     // send the broadcast message
-    send_broadcast(controller_1.targetPort);
+    send_broadcast(controller_0.targetPort);
 
     int frame_no = 0;
 
@@ -84,22 +94,30 @@ int main() {
         while (true) {
             counter++;
 
-            // For each port
-            for (int i = 0; i < controller_1.num_of_port_used; ++i) {
-                send_startframe(const_cast<wchar_t*>(std::wstring(controller_1.targetIP.begin(), controller_1.targetIP.end()).c_str()), 
-                                                    controller_1.targetPort, controller_1.controller_no, i);
-                send_controlnum(const_cast<wchar_t*>(std::wstring(controller_1.targetIP.begin(), controller_1.targetIP.end()).c_str()), 
-                                                    controller_1.targetPort, 4, controller_1.port_pixelNum, controller_1.controller_no, i);
-                send_controllight_oneframe(const_cast<wchar_t*>(std::wstring(controller_1.targetIP.begin(), controller_1.targetIP.end()).c_str()), 
-                                            controller_1.targetPort, 1, i, light_info.colorarray[frame_no][i], controller_1.port_pixelNum[i]);
-                send_endframe(const_cast<wchar_t*>(std::wstring(controller_1.targetIP.begin(), controller_1.targetIP.end()).c_str()), 
-                                                                controller_1.targetPort, controller_1.controller_no, i);
-
+            // print the light_info.colorarray[0]
+            for (int i = 0; i < light_info.rows; ++i) {
+                for (int j = 0; j < light_info.cols; ++j) {
+                    std::cout << light_info.colorarray[frame_no][i][j] << " ";
+                }
+                std::cout << std::endl;
             }
+
+            send_startframe(const_cast<wchar_t*>(std::wstring(controller_0.targetIP.begin(), controller_0.targetIP.end()).c_str()), 
+                                                controller_0.targetPort, controller_0.controller_no, 0);
+            send_controlnum(const_cast<wchar_t*>(std::wstring(controller_0.targetIP.begin(), controller_0.targetIP.end()).c_str()), 
+                                                controller_0.targetPort, 4, controller_0.port_pixelNum, controller_0.controller_no, 0);
+            send_controllight_oneframe(const_cast<wchar_t*>(std::wstring(controller_0.targetIP.begin(), controller_0.targetIP.end()).c_str()), 
+                                        controller_0.targetPort, controller_0.controller_no, 0, light_info.colorarray[frame_no], light_info.rows, light_info.cols);
+            send_endframe(const_cast<wchar_t*>(std::wstring(controller_0.targetIP.begin(), controller_0.targetIP.end()).c_str()), 
+                                                            controller_0.targetPort, controller_0.controller_no, 0);
+
+            std::cout << std::endl;
+
+            // break;
             
-            // send_startframe(const_cast<wchar_t*>(std::wstring(controller_1.targetIP.begin(), controller_1.targetIP.end()).c_str()), 
-            //                                     controller_1.targetPort, controller_1.controller_no, controller_1.num_of_port_used);
-            // send_controlnum(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, 4);
+            // send_startframe(const_cast<wchar_t*>(std::wstring(controller_0.targetIP.begin(), controller_0.targetIP.end()).c_str()), 
+            //                                     controller_0.targetPort, controller_0.controller_no, controller_0.num_of_port_used);
+            // send_controlnum(const_cast<wchar_t*>(std::wstring(controller_0.targetIP.begin(), controller_0.targetIP.end()).c_str()), targetPort, 4);
             // send_controllight_oneframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort, 
             //                             light_info.colorarray[frame_no], rows, cols);
             // send_endframe(const_cast<wchar_t*>(std::wstring(targetIP.begin(), targetIP.end()).c_str()), targetPort);
@@ -112,13 +130,29 @@ int main() {
             // }
 
             // Extract the received data from the received message with 3th to 7th index, 10th to 14th index, 17th to 21st index, 24th to 28th index
+
             std::vector<unsigned char> receivedData_modified;
             int temp_flag = 3;
-            for (int i = 0; i < controller_1.num_of_port_used; ++i) {
-                receivedData_modified.insert(receivedData_modified.end(), receivedMessage.begin() + temp_flag, 
-                                            receivedMessage.begin() + controller_1.port_pixelNum[i]);
-                temp_flag += 171;
+            for (int i = 0; i < controller_0.num_of_port_used; ++i) {
+                // Ensure the end position does not exceed the bounds of receivedMessage
+                int end_pos = temp_flag + controller_0.port_pixelNum[i];
+                if (end_pos > receivedMessage.size()) {
+                    throw std::length_error("Attempted to access beyond the end of receivedMessage");
+                }
+                receivedData_modified.insert(receivedData_modified.end(), receivedMessage.begin() + temp_flag, receivedMessage.begin() + end_pos);
+                temp_flag += 171; // Assuming 171 is the correct increment for temp_flag
             }
+
+            // print "Received Data Modified: "
+            std::cout << "Received Data Modified: ";
+
+            // print the receivedData_modified
+            for (int i = 0; i < receivedData_modified.size(); ++i) {
+                std::cout << std::hex << static_cast<int>(receivedData_modified[i]) << " ";
+            }
+
+            std::cout << std::endl;
+            
             
             // std::vector<unsigned char> receivedData_modified(receivedMessage.begin() + 3, receivedMessage.begin() + 7);
 

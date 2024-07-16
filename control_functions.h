@@ -46,7 +46,7 @@ extern "C" void send_controlnum(wchar_t* targetIP, int targetPort, int no_of_por
                                 int controller_no, int port_no);
 
 extern "C" void send_controllight_oneframe(wchar_t* targetIP, int targetPort, int controller_no, int port_no,
-                                            int* input_colorframe, int pixelNum);
+                                            int** input_colorframe, int rows, int cols);
 
 extern "C" void send_endframe(wchar_t* targetIP, int targetPort, int controller_no, int port_no);
 
