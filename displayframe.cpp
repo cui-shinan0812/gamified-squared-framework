@@ -16,11 +16,11 @@ int max_rows = 5; // N
 int max_cols = 8; // M
 */
 
-// namespace HardwareDll {
+// namespace HaredwareDll {
 
-    class Hardwaredriver {
-
+class Hardwaredriver {
     public:
+
         Hardwaredriver(std::string ip, int port, int controller_used, int rows, int cols, int* breakpoints, int num_breakpoints) {
             targetIP = ip;
             targetPort = port;
@@ -29,7 +29,6 @@ int max_cols = 8; // M
             max_cols = cols;
             breakpoints_length = breakpoints;
             num_breakpoints = num_breakpoints;
-
         }
 
         void displayFrame(int** input_colorframe, int* breakpoints_length) {
@@ -46,25 +45,25 @@ int max_cols = 8; // M
                     }
                 }
 
-                // // print broken_frames
-                // for (int j = 0; j < max_rows; j++) {
-                //     for (int k = 0; k < breakpoints_length[i]; k++) {
-                //         std::cout << broken_frames[j][k] << " ";
-                //     }
-                //     std::cout << std::endl;
-                // }
+                // print broken_frames
+                for (int j = 0; j < max_rows; j++) {
+                    for (int k = 0; k < breakpoints_length[i]; k++) {
+                        std::cout << broken_frames[j][k] << " ";
+                    }
+                    std::cout << std::endl;
+                }
 
                 send_startframe(std::wstring(targetIP.begin(), targetIP.end()).c_str(), targetPort, controller_no);
-                send_controlnum(std::wstring(targetIP.begin(), targetIP.end()).c_str(), targetPort, breakpoints_length[i], max_rows, controller_no);
+                send_controlnum(std::wstring(targetIP.begin(), targetIP.end()).c_str(), targetPort, breakpoints_length[controller_no], max_rows, controller_no);
                 send_controllight_oneframe(std::wstring(targetIP.begin(), targetIP.end()).c_str(), 
                                     targetPort, num_of_controller_used, controller_no, broken_frames, max_rows, breakpoints_length[i]);
                 send_endframe(std::wstring(targetIP.begin(), targetIP.end()).c_str(), targetPort, controller_no);
 
                 temp_start += breakpoints_length[i];
                 controller_no++;
-            }    
+            }
         }
-        
+
         void send_broadcast(int targetPort) {
             WSADATA wsaData;
             if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -183,16 +182,15 @@ int max_cols = 8; // M
         }
 
     private:
-        std::string targetIP;
-        int targetPort;
-        int num_of_controller_used;
-        int max_rows;
-        int max_cols;
-        int *breakpoints_length;
-        int num_breakpoints;
+        std::string targetIP = "169.254.255.255";
+        int targetPort = 4628;
+        int num_of_controller_used = 1;
+        int max_rows = 4;
+        int max_cols = 4;
+        int num_breakpoints = 1;
+        int *breakpoints_length = new int[num_breakpoints]{4};
 
         //////////////////////////////////////////// Hardware API ////////////////////////////////////////////
-        
         void send_startframe(const wchar_t* targetIP, int targetPort, int controller_no) {
             WSADATA wsaData;
             if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -287,8 +285,8 @@ int max_cols = 8; // M
             WSACleanup();
         }
     
-        void send_controlnum(const wchar_t* targetIP, int targetPort, int no_of_port_used, int max_rows,
-                                int controller_no) {
+        // no_of_port_used is equals to breakpoints length
+        void send_controlnum(const wchar_t* targetIP, int targetPort, int no_of_port_used, int max_rows, int controller_no) {
 
             WSADATA wsaData;
             if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -426,7 +424,7 @@ int max_cols = 8; // M
         }
 
         void send_controllight_oneframe(const wchar_t* targetIP, int targetPort, int num_of_controller_used, int controller_no,
-                                                int** input_colorframe, int rows, int cols) {
+                                        int** input_colorframe, int rows, int cols) {
 
             WSADATA wsaData;
             if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -586,12 +584,12 @@ int max_cols = 8; // M
 
                         }
 
-                        // // print tempcolor_orignal
-                        // for (char c : tempcolor_orignal) {
-                        //     std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(static_cast<unsigned char>(c)) << " ";
-                        // }
-                        // // print endl
-                        // std::cout << std::endl;
+                        // print tempcolor_orignal
+                        for (char c : tempcolor_orignal) {
+                            std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(static_cast<unsigned char>(c)) << " ";
+                        }
+                        // print endl
+                        std::cout << std::endl;
 
                         // push the tempcolor to the resultcolor
                         tempcolor.insert(tempcolor.end(), tempcolor_orignal.begin(), tempcolor_orignal.end());
@@ -739,16 +737,18 @@ int max_cols = 8; // M
         }
     };
 
-// }
-
 int main() {
+    std::random_device rd;
+    std::mt19937 gencolor(rd());
+    std::uniform_int_distribution<> dis(0,2);
+
     // Create a 2D dynamic array with all values set to 0
     int** input_colorframe = new int*[5];
     for (int i = 0; i < 5; ++i) {
         input_colorframe[i] = new int[8];
         for (int j = 0; j < 8; ++j) {
             // random from 0 to 2
-            input_colorframe[i][j] = rand() % 3;
+            input_colorframe[i][j] = dis(gencolor);
         }
     }
 
@@ -760,15 +760,13 @@ int main() {
     //     std::cout << std::endl;
     // }
 
-    std::string targetIP = "169.254.255.255";
-    int targetPort = 4628;
-    int num_of_controller_used = 4;
-    int num_of_port = 4;
-    int max_rows = 5;
-    int max_cols = 8;
-    int *breakpoints_length = new int[3]{1, 3, 4};
-    int num_breakpoints = 3;
-    Hardwaredriver hardwaredriver = Hardwaredriver(targetIP, targetPort, num_of_controller_used, max_rows, max_cols, breakpoints_length, num_breakpoints);
+    int num_breakpoints = 1;
+    int* breakpoints_length = new int[num_breakpoints]{4};
+    int max_rows = 4; // N -> vertical how many
+    int max_cols = 4; // M -> horizontal how many, i.e. 
+    int controller_used = 1;
+
+    Hardwaredriver hardwaredriver("169.254.255.255", 4628, controller_used, max_rows, max_cols, breakpoints_length, num_breakpoints);
 
     // send broadcast
     hardwaredriver.send_broadcast(4628);
