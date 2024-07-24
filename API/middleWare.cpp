@@ -235,7 +235,7 @@ int main() {
         for (int j = 0; j < M; ++j) {
             configMap[i][j] = new char[N];
             for (int k = 0; k < N; ++k) {
-                configMap[i][j][k] = i * M * N + j * N + k;
+                configMap[i][j][k] = 0;
             }
         }
     }
@@ -245,7 +245,7 @@ int main() {
     for (int i = 0; i < M; ++i) {
         test_unity[i] = new int[N];
         for (int j = 0; j < N; ++j) {
-            test_unity[i][j] = i * N + j;
+            test_unity[i][j] = 0;
         }
     }
 
