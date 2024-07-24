@@ -21,17 +21,19 @@ int max_cols = 8; // M
 class Hardwaredriver {
     public:
 
-        Hardwaredriver(std::string ip, int port, int controller_used, int rows, int cols, int* breakpoints, int num_breakpoints) {
-            targetIP = ip;
-            targetPort = port;
+        Hardwaredriver(int controller_used, int rows, int cols, int* breakpoints, int num_breakpoints) {
             num_of_controller_used = controller_used;
             max_rows = rows;
             max_cols = cols;
-            breakpoints_length = breakpoints;
+            breakpoints_length = new int[num_breakpoints];
+            for (int i = 0; i < num_breakpoints; i++) {
+                breakpoints_length[i] = breakpoints[i];
+            }
             num_breakpoints = num_breakpoints;
         }
 
-        void displayFrame(int** input_colorframe, int* breakpoints_length) {
+    /////////////////////////////////////////////// Hardware API for controller //////////////////////////////////////////////
+        void displayFrame(int** input_colorframe) {
 
             int temp_start = 0;
             int controller_no = 0;
@@ -181,16 +183,69 @@ class Hardwaredriver {
             return;
         }
 
+    ////////////////////////////////////////////// Hardware API for receiver ///////////////////////////////////////////
+    // vector<unsigned char> receiveMessage(int localport, int bufferSize)
+    // return a vecotr of unsigned char for about  1315 bytes
+    
+        const bool** getStepped() {
+
+            // Create a 2D dynamic array to store the received data
+            bool** received_data = new bool*[max_rows];
+
+            for (int i = 0; i < max_rows; ++i) {
+                received_data[i] = new bool[max_cols];  // For LED 2D step state
+                for (int j = 0; j < max_cols; ++j) {
+                        received_data[i][j] = false;    // set all to be false
+                }
+            }
+
+            int temp_flag = 3;
+            for (int i = 0; i < num_of_controller_used; i++) {
+                    // Receive the message
+                    std::vector<unsigned char> received_message = receiveMessage(localPort, bufferSize);
+                    // change received_message[1] to decimal and use a variable to store it
+                    int receiver_no = static_cast<int>(received_message[1]);
+
+                    // drop the first 2 bytes
+                    received_message.erase(received_message.begin(), received_message.begin() + 2);
+
+                // for each port
+                    for (int j = 0; j < breakpoints_length[i]; j++) {
+                        for (int k = 0; k < max_cols; k++) {
+                            int receive_message = j * 170 + k;
+                            // if the bit is 0xab, set the corresponding LED to be true
+                            if (received_message[receive_message] == 0xab) {
+                                received_data[j][k] = true;
+                            }
+                        }
+                    }
+                }
+
+            // Create a const version of the array
+            const bool** const_received_data = const_cast<const bool**>(received_data);
+
+            // return the received_data
+            return const_received_data;
+        }
+
     private:
+
+        // Controller info 
         std::string targetIP = "169.254.255.255";
         int targetPort = 4628;
-        int num_of_controller_used = 1;
-        int max_rows = 4;
-        int max_cols = 4;
-        int num_breakpoints = 1;
-        int *breakpoints_length = new int[num_breakpoints]{4};
+        // Receiver info
+        int localPort = 8200;
+        int bufferSize = 1500;
 
-        //////////////////////////////////////////// Hardware API ////////////////////////////////////////////
+
+        // Size info
+        int max_rows;
+        int max_cols;
+        int num_of_controller_used;
+        int num_breakpoints;
+        int *breakpoints_length = nullptr;
+
+        //////////////////////////////////////////// Hardware API for controller ////////////////////////////////////////////
         void send_startframe(const wchar_t* targetIP, int targetPort, int controller_no) {
             WSADATA wsaData;
             if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -735,7 +790,79 @@ class Hardwaredriver {
             closesocket(sockfd);
             WSACleanup();
         }
+    
+        ////////////////////////////////////////////// Hardware API for receiver ///////////////////////////////////////////
+        vector<unsigned char> receiveMessage(int localport, int bufferSize) {
+            WSADATA wsaData;
+            if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+            {
+                cout << "Failed to initialize winsock" << endl;
+                return {};
+            }
+
+            // Creating socket
+            SOCKET serverSocket = socket(AF_INET, SOCK_DGRAM, 0);
+            if (serverSocket == INVALID_SOCKET)
+            {
+                cout << "Failed to create socket" << endl;
+                WSACleanup();
+                return {};
+            }
+
+            // Set socket option to enable broadcast
+            int broadcastOption = 1;
+            if (setsockopt(serverSocket, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<char*>(&broadcastOption), sizeof(broadcastOption)) == SOCKET_ERROR)
+            {
+                cout << "Failed to set socket option" << endl;
+                closesocket(serverSocket);
+                WSACleanup();
+                return {};
+            }
+
+            // Specifying the server address
+            sockaddr_in serverAddress;
+            serverAddress.sin_family = AF_INET;
+            serverAddress.sin_port = htons(localport);
+            serverAddress.sin_addr.s_addr = INADDR_ANY;
+
+            // Binding socket
+            if (bind(serverSocket, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) == SOCKET_ERROR)
+            {
+                cout << "Failed to bind socket" << endl;
+                closesocket(serverSocket);
+                WSACleanup();
+                return {};
+            }
+
+            // Receiving data
+            char buffer[bufferSize];
+            memset(buffer, 0, sizeof(buffer));
+            sockaddr_in clientAddress;
+            int clientAddressLength = sizeof(clientAddress);
+            int bytesReceived = recvfrom(serverSocket, buffer, sizeof(buffer), 0,
+                                        reinterpret_cast<sockaddr*>(&clientAddress), &clientAddressLength);
+            if (bytesReceived == SOCKET_ERROR)
+            {
+                cout << "Failed to receive data" << endl;
+                closesocket(serverSocket);
+                WSACleanup();
+                return {};
+            }
+
+            // Convert the received data into a vector of unsigned characters
+            vector<unsigned char> receivedData(buffer, buffer + bytesReceived);
+
+            // Closing the socket
+            closesocket(serverSocket);
+            WSACleanup();
+
+            return receivedData;
+        }
+
     };
+
+
+/*
 
 int main() {
     std::random_device rd;
@@ -760,17 +887,19 @@ int main() {
     //     std::cout << std::endl;
     // }
 
-    int num_breakpoints = 1;
-    int* breakpoints_length = new int[num_breakpoints]{4};
-    int max_rows = 4; // N -> vertical how many
-    int max_cols = 4; // M -> horizontal how many, i.e. 
-    int controller_used = 1;
+    int num_breakpoints = 3;
+    int* breakpoints_length = new int[num_breakpoints]{2, 3, 3};
+    int max_rows = 5; // N -> vertical how many
+    int max_cols = 8; // M -> horizontal how many, i.e. 
+    int controller_used = 3;
 
-    Hardwaredriver hardwaredriver("169.254.255.255", 4628, controller_used, max_rows, max_cols, breakpoints_length, num_breakpoints);
+    Hardwaredriver hardwaredriver(controller_used, max_rows, max_cols, breakpoints_length, num_breakpoints);
 
     // send broadcast
     hardwaredriver.send_broadcast(4628);
-    hardwaredriver.displayFrame(input_colorframe, breakpoints_length);
+    hardwaredriver.displayFrame(input_colorframe);
 
     return 0;
 }
+
+*/

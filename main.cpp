@@ -229,9 +229,6 @@ int main() {
                         // // std :: cout << "shut down the yellow" << std::endl;
 
 
-
-
-
                         light_info.step_start_time[i][j] = std::chrono::steady_clock::time_point();
                     }
                 }
