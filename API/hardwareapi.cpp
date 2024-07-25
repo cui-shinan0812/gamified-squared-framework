@@ -19,7 +19,8 @@ int max_cols = 8; // M
 
 // namespace HaredwareDll {
 
-Hardwaredriver::Hardwaredriver(int controller_used, int rows, int cols, int* breakpoints, int num_breakpoints) {
+Hardwaredriver::Hardwaredriver(int controller_used, int rows, int cols, int *breakpoints, int num_breakpoints, string targetIP)
+{
     num_of_controller_used = controller_used;
     max_rows = rows;
     max_cols = cols;
@@ -28,6 +29,7 @@ Hardwaredriver::Hardwaredriver(int controller_used, int rows, int cols, int* bre
         breakpoints_length[i] = breakpoints[i];
     }
     num_breakpoints = num_breakpoints;
+    this->targetIP = targetIP;
 }
 
 /////////////////////////////////////////// Hardware API for controller //////////////////////////////////////////////
@@ -35,12 +37,14 @@ void Hardwaredriver::displayFrame(int** input_colorframe) {
 
     int temp_start = 0;
     int controller_no = 0;
+    cout << "Hardware display" << endl;
 
     for (int i = 0; i < num_breakpoints; i++) {
         int** broken_frames = new int*[max_rows];
         for (int j = 0; j < max_rows; j++) {
             broken_frames[j] = new int[breakpoints_length[i]];
             for (int k = 0; k < breakpoints_length[i]; k++) {
+                cout << "at j = " << j << " k = " << k << input_colorframe[j][temp_start + k] << endl;
                 broken_frames[j][k] = input_colorframe[j][temp_start + k];
             }
         }
@@ -53,6 +57,7 @@ void Hardwaredriver::displayFrame(int** input_colorframe) {
             std::cout << std::endl;
         }
 
+        cout << "Inside display frame: targetIP: " << targetIP << endl;
         send_startframe(std::wstring(targetIP.begin(), targetIP.end()).c_str(), targetPort, controller_no);
         send_controlnum(std::wstring(targetIP.begin(), targetIP.end()).c_str(), targetPort, breakpoints_length[controller_no], max_rows, controller_no);
         send_controllight_oneframe(std::wstring(targetIP.begin(), targetIP.end()).c_str(), 
@@ -260,6 +265,12 @@ void Hardwaredriver::send_startframe(const wchar_t* targetIP, int targetPort, in
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_port = htons(targetPort);
+
+    // Logging targetIP for debugging
+    if (targetIP == nullptr) {
+        std::cout << "targetIP is null" << endl;
+    }else
+    std::wcout << L"Attempting to connect to IP: " << targetIP << std::endl;
 
     // Use InetPtonW for wide character strings
     if (InetPtonW(AF_INET, targetIP, &(servaddr.sin_addr)) != 1) {

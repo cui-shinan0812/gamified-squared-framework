@@ -10,7 +10,7 @@ using namespace std;
 class Hardwaredriver {
 public:
 
-    Hardwaredriver(int controller_used, int rows, int cols, int* breakpoints, int num_breakpoints);
+    Hardwaredriver(int controller_used, int rows, int cols, int* breakpoints, int num_breakpoints, string targetIP);
     void displayFrame(int** input_colorframe);
     void send_broadcast(int targetPort);
     const bool** getStepped();
