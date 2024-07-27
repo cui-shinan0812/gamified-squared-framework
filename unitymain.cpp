@@ -1,28 +1,19 @@
-#include "control_functions.h"
-#include "middleWare.h"
-#include "hardwareapi.h"
-#include <windows.h>
 #include <iostream>
-#include <random>
-#include <chrono>
-#include <thread>
 #include <string>
-#include <vector>
-#include <csignal>
+#include "middleWare.h"
 using namespace std;
-
 
 int main() {
     int M = 3;
     int N = 4;
     int numOfPorts = 4;
     int maxLength = 5;
-    int *portsDistribution = new int[4]{numOfPorts};
+    int *portsDistribution = new int[1]{numOfPorts};
 
     const char* distribution[M][N] = {
-        {"A1", "B1", "C1", "D1"},
-        {"A2", "B2", "C2", "C5"},
-        {"A3", "A4", "C3", "C4"}
+        {"A0", "B0", "C0", "D0"},
+        {"A1", "B1", "C1", "C4"},
+        {"A2", "A3", "C2", "C3"}
     };
 
     // create a 2D cstring dynamic array
@@ -43,21 +34,21 @@ int main() {
         }
     }
 
-    // Print "Start"
-    cout << "Start" << endl;
+    // // Print "Start"
+    // cout << "Start" << endl;
 
-    for (int i = 0; i < M; ++i)
-    {
-        for (int j = 0; j < N; ++j)
-        {
-            cout << configMap[i][j] << endl;
-        }
-    }
+    // for (int i = 0; i < M; ++i)
+    // {
+    //     for (int j = 0; j < N; ++j)
+    //     {
+    //         cout << configMap[i][j] << endl;
+    //     }
+    // }
 
     // Call the displayFrame function
     init(M, N, numOfPorts, maxLength, 1, portsDistribution, configMap);
-    cout << "enter func" << endl;
-    displayFrame(test_unity);
+    // cout << "enter func" << endl;
+    displayFrameUnity(test_unity);
 
     return 0;
 }

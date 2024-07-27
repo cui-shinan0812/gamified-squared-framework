@@ -8,7 +8,6 @@
 #include <WS2tcpip.h>
 #include <iomanip>
 #include <vector>
-#include "control_functions.h"
 #include "hardwareapi.h"
 using namespace std;
 
@@ -19,7 +18,8 @@ int max_cols = 8; // M
 
 // namespace HaredwareDll {
 
-Hardwaredriver::Hardwaredriver(int controller_used, int rows, int cols, int *breakpoints, int num_breakpoints, string targetIP)
+Hardwaredriver::Hardwaredriver(int controller_used, int rows, int cols, int *breakpoints, int num_breakpoints, string targetIP, int targetPort,
+                                int localPort, int bufferSize)
 {
     num_of_controller_used = controller_used;
     max_rows = rows;
@@ -28,8 +28,12 @@ Hardwaredriver::Hardwaredriver(int controller_used, int rows, int cols, int *bre
     for (int i = 0; i < num_breakpoints; i++) {
         breakpoints_length[i] = breakpoints[i];
     }
-    num_breakpoints = num_breakpoints;
+    
+    this->num_breakpoints = num_breakpoints;  
     this->targetIP = targetIP;
+    this->targetPort = targetPort;
+    this->localPort = localPort;
+    this->bufferSize = bufferSize;
 }
 
 /////////////////////////////////////////// Hardware API for controller //////////////////////////////////////////////
@@ -39,6 +43,10 @@ void Hardwaredriver::displayFrame(int** input_colorframe) {
     int controller_no = 0;
     cout << "Hardware display" << endl;
 
+    // print "num_breakpoints: " << num_breakpoints << endl;
+    cout << "num_of_controller_used: " << num_of_controller_used << endl;
+    cout << "num_breakpoints: " << num_breakpoints << endl;
+    
     for (int i = 0; i < num_breakpoints; i++) {
         int** broken_frames = new int*[max_rows];
         for (int j = 0; j < max_rows; j++) {
@@ -189,7 +197,6 @@ void Hardwaredriver::send_broadcast(int targetPort) {
 ////////////////////////////////////////////// Hardware API for receiver ///////////////////////////////////////////
 // vector<unsigned char> receiveMessage(int localport, int bufferSize)
 // return a vecotr of unsigned char for about  1315 bytes
-
 const bool** Hardwaredriver::getStepped() {
 
     // Create a 2D dynamic array to store the received data
@@ -212,6 +219,8 @@ const bool** Hardwaredriver::getStepped() {
             // drop the first 2 bytes
             received_message.erase(received_message.begin(), received_message.begin() + 2);
 
+        /// bug !!!
+        /// need to fill in different space
         // for each port
             for (int j = 0; j < breakpoints_length[i]; j++) {
                 for (int k = 0; k < max_cols; k++) {
@@ -231,20 +240,20 @@ const bool** Hardwaredriver::getStepped() {
     return const_received_data;
 }
 
-// Controller info 
-std::string targetIP = "169.254.255.255";
-int targetPort = 4628;
-// Receiver info
-int localPort = 8200;
-int bufferSize = 1500;
+// // Controller info 
+// std::string targetIP = "169.254.255.255";
+// int targetPort = 4628;
+// // Receiver info
+// int localPort = 8200;
+// int bufferSize = 1500;
 
 
-// Size info
-int max_rows;
-int max_cols;
-int num_of_controller_used;
-int num_breakpoints;
-int *breakpoints_length = nullptr;
+// // Size info
+// int max_rows;
+// int max_cols;
+// int num_of_controller_used;
+// int num_breakpoints;
+// int *breakpoints_length = nullptr;
 
 //////////////////////////////////////////// Hardware API for controller ////////////////////////////////////////////
 void Hardwaredriver::send_startframe(const wchar_t* targetIP, int targetPort, int controller_no) {
@@ -638,6 +647,10 @@ void Hardwaredriver::send_controllight_oneframe(const wchar_t* targetIP, int tar
                         
                         // print row_num and col_num
                         // std::cout << i << " " << j << std::endl;
+                    }
+
+                    else {
+                        tempcolor_orignal.push_back(0x00);
                     }
                 }
 

@@ -1,6 +1,6 @@
 #include <iostream>
 #include <iomanip>
-#include "control_functions.h"
+#include "hardwareapi.h"
 
 unsigned char Check_sum(unsigned char* r_d, unsigned short Len) {
     unsigned short i;

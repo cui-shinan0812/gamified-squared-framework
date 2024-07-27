@@ -7,10 +7,14 @@
 #include <vector>
 using namespace std;
 
+unsigned char Check_sum(unsigned char* r_d, unsigned short Len);
+unsigned char find_crc(unsigned char out_crc);
+
 class Hardwaredriver {
 public:
 
-    Hardwaredriver(int controller_used, int rows, int cols, int* breakpoints, int num_breakpoints, string targetIP);
+    Hardwaredriver(int controller_used, int rows, int cols, int *breakpoints, int num_breakpoints, string targetIP, int targetPort,
+                                int localPort, int bufferSize);
     void displayFrame(int** input_colorframe);
     void send_broadcast(int targetPort);
     const bool** getStepped();

@@ -14,7 +14,7 @@ create a object of the hardware class
 HardwareClassName hardwareObject = None;
 */
 #include "hardwareapi.h"
-// #include "middleWare.h"
+#include "middleWare.h"
 #include <iostream>
 
 Hardwaredriver* instance = nullptr;
@@ -31,7 +31,7 @@ Hardwaredriver* instance = nullptr;
 
 // Function to get port index from a character code
 int getPortIndex(const char* code) {
-    cout << "code: " << code[0] << endl;
+    // cout << "code: " << code[0] << endl;
     return static_cast<int>(code[0]) - static_cast<int>('A');
 }
 
@@ -42,7 +42,7 @@ int getHardwareIndex(const char* code) {
         portIndex = portIndex * 10 + (code[i] - '0');
         ++i;
     }
-    cout << "portIndex: " << portIndex << endl;
+    // cout << "portIndex: " << portIndex << endl;
     return portIndex;
 }
 
@@ -110,17 +110,17 @@ T** returnUnityMatrix(const T* const* hardwareMatrix) {
 */
 
 /***
-@param configMap: 2D array for string (i.e. cha)
+@param configMap: 2D array for string (i.e. char)
 */
-void init(int m, int n, int numPorts, int length, int controller_used, int* portsDistribution ,const char*** configMap) {
+extern "C" void init(int m, int n, int numPorts, int length, int controller_used, int* portsDistribution ,const char*** configMap) {
     M = m;
     N = n;
     numberOfPorts = numPorts; // how many ports are used in total
     // print numbOfPorts
-    cout << "numPorts: " << numPorts << endl;
+    // cout << "numPorts: " << numPorts << endl;
     maxLength = length;
-    cout << "length: " << length << endl;
-    cout << "enter init" << endl;
+    // cout << "length: " << length << endl;
+    // cout << "enter init" << endl;
 
     /* 
     XXX: TO BE IMPLEMENTED
@@ -138,10 +138,18 @@ void init(int m, int n, int numPorts, int length, int controller_used, int* port
 
     // Create a string for the target IP
 
-  // initialize the Hardware class object
-    instance = new Hardwaredriver(controller_used, M, N, portsDistribution, numPorts, "169.254.255.255");
+    // initialize the Hardware class object
+    string targetIP = "169.254.255.255";
+    int targetPort = 4628;
+    // Receiver info
+    int localPort = 8200;
+    int bufferSize = 1500;
+    int num_breakpoints = 1;
 
-    cout << "create instance" << endl;
+    instance = new Hardwaredriver(controller_used, maxLength, numPorts, portsDistribution, 
+                                    num_breakpoints, targetIP, targetPort, localPort, bufferSize);
+
+    // cout << "create instance" << endl;
 
     // Allocate memory for unityToHardwareMap
     unityToHardwareMap = new int**[M];
@@ -154,77 +162,62 @@ void init(int m, int n, int numPorts, int length, int controller_used, int* port
         }
     }
     // print shape of unityToHardwareMap
-    cout << "shape of unityToHardwareMap: " << M << " " << N << endl;
-    cout << "after allocate memory for unityToHardwareMap" << endl;
+    // cout << "shape of unityToHardwareMap: " << M << " " << N << endl;
+    // cout << "after allocate memory for unityToHardwareMap" << endl;
     // Allocate memory for hardwareToUnityMap
     hardwareToUnityMap = new int**[maxLength];
     for (int i = 0; i < maxLength; ++i) {
         hardwareToUnityMap[i] = new int*[numberOfPorts];
         for (int j = 0; j < numberOfPorts; ++j) {
             hardwareToUnityMap[i][j] = new int[2];
-            hardwareToUnityMap[i][j][0] = -1;
+            hardwareToUnityMap[i][j][0] = -1; 
             hardwareToUnityMap[i][j][1] = -1;
         }
     }
 
     // print shape of hardwareToUnityMap
-    cout << "shape of hardwareToUnityMap: " << maxLength << " " << numberOfPorts << endl;
-    cout << "after allocate memory for hardwareToUnityMap" << endl;
+    // cout << "shape of hardwareToUnityMap: " << maxLength << " " << numberOfPorts << endl;
+    // cout << "after allocate memory for hardwareToUnityMap" << endl;
 
     // Initialize unityToHardwareMap and hardwareToUnityMap
     for (int i = 0; i < M; ++i) {
         for (int j = 0; j < N; ++j) {
             // print i and j
-            cout << "i: " << i << endl;
-            cout << "j: " << j << endl;
+            // cout << "i: " << i << endl;
+            // cout << "j: " << j << endl;
             // cout << "after line 1" << endl;
             int portIndex = getPortIndex(configMap[i][j]);
             // cout << "after line 2" << endl;
-            int hardwareIndex = getHardwareIndex(configMap[i][j]) - 1;
+            int hardwareIndex = getHardwareIndex(configMap[i][j]);
             // cout << "after line 3" << endl;
             unityToHardwareMap[i][j][0] = hardwareIndex;
             // cout << "after line 4" << endl;
             unityToHardwareMap[i][j][1] = portIndex;
             // cout << "after line 5" << endl;
-            cout << endl
-                 << "hardwareIndex: " << hardwareIndex << endl;
-            cout << "portIndex: " << portIndex << endl;
-
-            if (hardwareIndex < 0 || hardwareIndex >= 5) {
-                cout << "Error: hardwareIndex is out of bounds." << endl;
-                // Handle error, e.g., return a default value or throw an exception
-                cout << "HardwareIndex is: " << hardwareIndex << endl;
-                return; // Example default value
-            }
-            if (portIndex < 0 || portIndex >= 4) {
-                cout << "Error: portIndex is out of bounds." << endl;
-                cout << "PortIndex is: " << portIndex << endl;
-                // Handle error
-                return; // Example default value
-            }
-
+            // cout << endl
+            //      << "hardwareIndex: " << hardwareIndex << endl;
+            // cout << "portIndex: " << portIndex << endl;
 
             hardwareToUnityMap[hardwareIndex][portIndex][0] = i; // bug
             // cout << "after line 6" << endl;
             hardwareToUnityMap[hardwareIndex][portIndex][1] = j;
             // cout << "after line 7" << endl;
-
-            cout << endl;
+            // cout << endl;
         }
     }
 
-    // print unityToHardwareMap
-    cout << "unityToHardwareMap: " << endl;
-    for (int i = 0; i < M; ++i) {
-        for (int j = 0; j < N; ++j) {
-            cout << unityToHardwareMap[i][j][0] << " " << unityToHardwareMap[i][j][1] << endl;
-        }
-    }
+    // // print unityToHardwareMap
+    // cout << "unityToHardwareMap: " << endl;
+    // for (int i = 0; i < M; ++i) {
+    //     for (int j = 0; j < N; ++j) {
+    //         cout << unityToHardwareMap[i][j][0] << " " << unityToHardwareMap[i][j][1] << endl;
+    //     }
+    // }
 
-    cout << "after initialize" << endl;
+    // cout << "after initialize" << endl;
 }
 
-void destroy() {
+extern "C" void destroy() {
     // Deallocate memory for unityToHardwareMap
     if (unityToHardwareMap != nullptr) {
         for (int i = 0; i < M; ++i) {
@@ -255,25 +248,28 @@ void destroy() {
     maxLength = 0;
 }
 
-template <typename T> 
-void displayFrame(T const* const* frame) {
-    T** hardwareMatrix = returnHardwareMatrix(frame);
+extern "C" void displayFrameUnity(int const* const* frame) {
+    int** hardwareMatrix = returnHardwareMatrix(frame);
+
+    // Print hardwareMatrix
+    // cout << "hardwareMatrix: " << endl;
+    for (int i = 0; i < maxLength; ++i) {
+        for (int j = 0; j < numberOfPorts; ++j) {
+            cout << hardwareMatrix[i][j] << " ";
+        }
+        cout << endl;
+    }
+
     /*
     XXX: TO BE IMPLEMENTED
     call the hardware function to display the frame
     */
-    cout << "before instance display" << endl;
-    if (!instance)
-    {
-        cout << "instance is null" << endl;
-        return;
-    }
     instance->displayFrame(hardwareMatrix);
     // print "finished"
-    cout << "finished" << endl;
+    // cout << "finished" << endl;
 }
 
-bool** getSensors() {
+extern "C" bool** getSensors() {
     const bool** hardwareMatrix;
     /*
     XXX: TO BE IMPLEMENTED
@@ -281,54 +277,4 @@ bool** getSensors() {
     */
     hardwareMatrix = instance->getStepped();
     return returnUnityMatrix(hardwareMatrix);
-}
-
-int main() {
-    int M = 3;
-    int N = 4;
-    int numOfPorts = 4;
-    int maxLength = 5;
-    int *portsDistribution = new int[4]{numOfPorts};
-
-    const char* distribution[M][N] = {
-        {"A1", "B1", "C1", "D1"},
-        {"A2", "B2", "C2", "C5"},
-        {"A3", "A4", "C3", "C4"}
-    };
-
-    // create a 2D cstring dynamic array
-    const char*** configMap = new const char**[M];
-    for (int i = 0; i < M; ++i) {
-        configMap[i] = new const char*[N];
-        for (int j = 0; j < N; ++j) {
-            configMap[i][j] = distribution[i][j];
-        }
-    }
-    
-    // Create test_unity
-    int**test_unity = new int*[M];
-    for (int i = 0; i < M; ++i) {
-        test_unity[i] = new int[N];
-        for (int j = 0; j < N; ++j) {
-            test_unity[i][j] = 0;
-        }
-    }
-
-    // Print "Start"
-    cout << "Start" << endl;
-
-    for (int i = 0; i < M; ++i)
-    {
-        for (int j = 0; j < N; ++j)
-        {
-            cout << configMap[i][j] << endl;
-        }
-    }
-
-    // Call the displayFrame function
-    init(M, N, numOfPorts, maxLength, 1, portsDistribution, configMap);
-    cout << "enter func" << endl;
-    displayFrame(test_unity);
-
-    return 0;
 }
