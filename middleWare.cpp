@@ -140,6 +140,7 @@ extern "C" void init(int m, int n, int numPorts, int length, int controller_used
 
     // initialize the Hardware class object
     string targetIP = "169.254.255.255";
+    string broadcastIP = "255.255.255.255";
     int targetPort = 4628;
     // Receiver info
     int localPort = 8200;
@@ -149,7 +150,8 @@ extern "C" void init(int m, int n, int numPorts, int length, int controller_used
     instance = new Hardwaredriver(controller_used, maxLength, numPorts, portsDistribution, 
                                     num_breakpoints, targetIP, targetPort, localPort, bufferSize);
 
-    // cout << "create instance" << endl;
+    // send broadcast
+    instance->send_broadcast(std::wstring(broadcastIP.begin(), broadcastIP.end()).c_str(), targetPort);
 
     // Allocate memory for unityToHardwareMap
     unityToHardwareMap = new int**[M];
@@ -264,17 +266,19 @@ extern "C" void displayFrameUnity(int const* const* frame) {
     XXX: TO BE IMPLEMENTED
     call the hardware function to display the frame
     */
+   
     instance->displayFrame(hardwareMatrix);
     // print "finished"
     // cout << "finished" << endl;
 }
 
-extern "C" bool** getSensors() {
-    const bool** hardwareMatrix;
+extern "C" bool ** getSensors() {
+    bool** hardwareMatrix;
     /*
     XXX: TO BE IMPLEMENTED
     call the hardware function to get the sensors
     */
     hardwareMatrix = instance->getStepped();
+
     return returnUnityMatrix(hardwareMatrix);
 }

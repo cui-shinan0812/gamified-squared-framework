@@ -77,40 +77,48 @@ void Hardwaredriver::displayFrame(int** input_colorframe) {
     }
 }
 
-void Hardwaredriver::send_broadcast(int targetPort) {
+void Hardwaredriver::send_broadcast(const wchar_t* broadcastIP, int targetPort) {
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        std::cerr << "Failed to initialize winsock" << std::endl;
-        return ;
+        std::wcerr << L"Failed to initialize Winsock" << std::endl;
+        return;
     }
 
     SOCKET sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd == INVALID_SOCKET) {
-        std::cerr << "Failed to create socket" << std::endl;
+        std::wcerr << L"Failed to create socket" << std::endl;
         WSACleanup();
-        return ;
+        return;
     }
 
-    const char* broadcastIP = "255.255.255.255";
-    // const char* broadcastIP = "169.254.161.94";
-
-    BOOL broadcastEnable = TRUE;
-    if (setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, (const char*)&broadcastEnable, sizeof(broadcastEnable)) == SOCKET_ERROR) {
-        std::cerr << "Failed to enable broadcasting" << std::endl;
+    // Enable broadcasting
+    BOOL broadcast = TRUE;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, (char*)&broadcast, sizeof(broadcast)) == SOCKET_ERROR) {
+        std::wcerr << L"Failed to set socket option for broadcasting" << std::endl;
         closesocket(sockfd);
         WSACleanup();
-        return ;
+        return;
     }
 
     sockaddr_in servaddr;
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_port = htons(targetPort);
-    if (inet_pton(AF_INET, broadcastIP, &(servaddr.sin_addr)) <= 0) {
-        std::cerr << "Failed to set up server address" << std::endl;
+
+    // Logging targetIP for debugging
+    if (broadcastIP == nullptr) {
+        std::cout << "targetIP is null" << std::endl;
+    } else {
+        std::wcout << L"Attempting to connect to IP: " << broadcastIP << std::endl;
+    }
+
+
+    // Use InetPtonW for wide character strings
+    if (InetPtonW(AF_INET, broadcastIP, &(servaddr.sin_addr)) != 1) {
+        std::wcerr << L"Failed to set up server address" << std::endl;
         closesocket(sockfd);
         WSACleanup();
-        return ;
+        return;
     }
 
     // Define the command buffer
@@ -182,22 +190,19 @@ void Hardwaredriver::send_broadcast(int targetPort) {
     }
 
     // print the message in hexcdecimal
-    std::cout << "Broadcasted message: ";
-    for (char c : message) {
-        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(static_cast<unsigned char>(c)) << " ";
+    for (auto c : command) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(c) << " ";
     }
     std::cout << std::endl;
 
     closesocket(sockfd);
     WSACleanup();
-
-    return;
 }
 
 ////////////////////////////////////////////// Hardware API for receiver ///////////////////////////////////////////
 // vector<unsigned char> receiveMessage(int localport, int bufferSize)
 // return a vecotr of unsigned char for about  1315 bytes
-const bool** Hardwaredriver::getStepped() {
+extern "C" bool** Hardwaredriver::getStepped() {
 
     // Create a 2D dynamic array to store the received data
     bool** received_data = new bool*[max_rows];
@@ -211,33 +216,33 @@ const bool** Hardwaredriver::getStepped() {
 
     int temp_flag = 3;
     for (int i = 0; i < num_of_controller_used; i++) {
-            // Receive the message
-            std::vector<unsigned char> received_message = receiveMessage(localPort, bufferSize);
-            // change received_message[1] to decimal and use a variable to store it
-            int receiver_no = static_cast<int>(received_message[1]);
+        // Receive the message
+        std::vector<unsigned char> received_message = receiveMessage(localPort, bufferSize);
+        // change received_message[1] to decimal and use a variable to store it
+        int receiver_no = static_cast<int>(received_message[1]);
 
-            // drop the first 2 bytes
-            received_message.erase(received_message.begin(), received_message.begin() + 2);
+        // drop the first 2 bytes
+        received_message.erase(received_message.begin(), received_message.begin() + 2);
 
-        /// bug !!!
-        /// need to fill in different space
+        // / bug !!!
+        // / need to fill in different space
         // for each port
-            for (int j = 0; j < breakpoints_length[i]; j++) {
-                for (int k = 0; k < max_cols; k++) {
-                    int receive_message = j * 170 + k;
-                    // if the bit is 0xab, set the corresponding LED to be true
-                    if (received_message[receive_message] == 0xab) {
-                        received_data[j][k] = true;
-                    }
+        for (int j = 0; j < breakpoints_length[i]; j++) {
+            for (int k = 0; k < max_cols; k++) {
+                int receive_message = j * 170 + k;
+                // if the bit is 0xab, set the corresponding LED to be true
+                if (received_message[receive_message] == 0xab) {
+                    received_data[j][k] = true;
                 }
             }
         }
+    }
 
-    // Create a const version of the array
-    const bool** const_received_data = const_cast<const bool**>(received_data);
+    // // Create a const version of the array
+    // const bool** const_received_data = const_cast<const bool**>(received_data);
 
     // return the received_data
-    return const_received_data;
+    return received_data;
 }
 
 // // Controller info 
