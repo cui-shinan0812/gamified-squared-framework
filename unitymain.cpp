@@ -2,6 +2,8 @@
 #include <string>
 #include "middleWare.h"
 using namespace std;
+#define WIN32_LEAN_AND_MEAN
+#include <winsock2.h>
 
 int main() {
     int M = 4;
@@ -51,14 +53,15 @@ int main() {
     // cout << "enter func" << endl;
     displayFrameUnity(test_unity);
     // call getSensors
-    bool ** sensors = getSensors();
-    // print sensors
-    for (int i = 0; i < M; ++i) {
-        for (int j = 0; j < N; ++j) {
-            cout << sensors[i][j] << " ";
-        }
-        cout << endl;
-    }
+    // bool ** sensors = getSensors();
+
+    // // print sensors
+    // for (int i = 0; i < M; ++i) {
+    //     for (int j = 0; j < N; ++j) {
+    //         cout << sensors[i][j] << " ";
+    //     }
+    //     cout << endl;
+    // }
 
     return 0;
 }

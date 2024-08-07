@@ -37,7 +37,7 @@ private:
     void send_controllight_oneframe(const wchar_t* targetIP, int targetPort, int num_of_controller_used, int controller_no,
                                         int** input_colorframe, int rows, int cols);
     void send_endframe(const wchar_t* targetIP, int targetPort, int controller_no);
-    vector<unsigned char> receiveMessage(int localport, int bufferSize);
+    vector<int> receiveBroadcastSignal(int BROADCAST_PORT, int BUFFER_SIZE);
 };
 
 #endif

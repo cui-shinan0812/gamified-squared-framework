@@ -13,12 +13,13 @@ XXX: TO BE IMPLEMENTED
 create a object of the hardware class
 HardwareClassName hardwareObject = None;
 */
+
 #include "hardwareapi.h"
-#include "middleWare.h"
+#define UNITY_EXPORTS
+#include "middleWaredll.h"
 #include <iostream>
 
 Hardwaredriver* instance = nullptr;
-
 
 /*
 ======================================================
@@ -112,7 +113,7 @@ T** returnUnityMatrix(const T* const* hardwareMatrix) {
 /***
 @param configMap: 2D array for string (i.e. char)
 */
-extern "C" void init(int m, int n, int numPorts, int length, int controller_used, int* portsDistribution ,const char*** configMap) {
+UNITY_API void init(int m, int n, int numPorts, int length, int controller_used, int* portsDistribution ,const char*** configMap) {
     M = m;
     N = n;
     numberOfPorts = numPorts; // how many ports are used in total
@@ -219,7 +220,7 @@ extern "C" void init(int m, int n, int numPorts, int length, int controller_used
     // cout << "after initialize" << endl;
 }
 
-extern "C" void destroy() {
+UNITY_API void destroy() {
     // Deallocate memory for unityToHardwareMap
     if (unityToHardwareMap != nullptr) {
         for (int i = 0; i < M; ++i) {
@@ -250,7 +251,7 @@ extern "C" void destroy() {
     maxLength = 0;
 }
 
-extern "C" void displayFrameUnity(int const* const* frame) {
+UNITY_API void displayFrameUnity(int const* const* frame) {
     int** hardwareMatrix = returnHardwareMatrix(frame);
 
     // Print hardwareMatrix
@@ -272,7 +273,7 @@ extern "C" void displayFrameUnity(int const* const* frame) {
     // cout << "finished" << endl;
 }
 
-extern "C" bool ** getSensors() {
+UNITY_API bool ** getSensors() {
     bool** hardwareMatrix;
     /*
     XXX: TO BE IMPLEMENTED

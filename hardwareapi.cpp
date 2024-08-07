@@ -16,7 +16,6 @@ int max_rows = 5; // N
 int max_cols = 8; // M
 */
 
-// namespace HaredwareDll {
 
 Hardwaredriver::Hardwaredriver(int controller_used, int rows, int cols, int *breakpoints, int num_breakpoints, string targetIP, int targetPort,
                                 int localPort, int bufferSize)
@@ -202,38 +201,41 @@ void Hardwaredriver::send_broadcast(const wchar_t* broadcastIP, int targetPort) 
 ////////////////////////////////////////////// Hardware API for receiver ///////////////////////////////////////////
 // vector<unsigned char> receiveMessage(int localport, int bufferSize)
 // return a vecotr of unsigned char for about  1315 bytes
-extern "C" bool** Hardwaredriver::getStepped() {
+bool** Hardwaredriver::getStepped() {
 
     // Create a 2D dynamic array to store the received data
     bool** received_data = new bool*[max_rows];
 
     for (int i = 0; i < max_rows; ++i) {
         received_data[i] = new bool[max_cols];  // For LED 2D step state
-        for (int j = 0; j < max_cols; ++j) {
-                received_data[i][j] = false;    // set all to be false
-        }
     }
 
+    // /*
     int temp_flag = 3;
     for (int i = 0; i < num_of_controller_used; i++) {
+
         // Receive the message
-        std::vector<unsigned char> received_message = receiveMessage(localPort, bufferSize);
+        std::vector<int> received_message = receiveBroadcastSignal(localPort, bufferSize);
+
         // change received_message[1] to decimal and use a variable to store it
         int receiver_no = static_cast<int>(received_message[1]);
 
         // drop the first 2 bytes
         received_message.erase(received_message.begin(), received_message.begin() + 2);
 
-        // / bug !!!
-        // / need to fill in different space
+        // bug !!!
+        // need to fill in different space
         // for each port
         for (int j = 0; j < breakpoints_length[i]; j++) {
             for (int k = 0; k < max_cols; k++) {
-                int receive_message = j * 170 + k;
+                int receive_message_no = j * 170 + k;
                 // if the bit is 0xab, set the corresponding LED to be true
-                if (received_message[receive_message] == 0xab) {
-                    received_data[j][k] = true;
-                }
+                // if (received_message[receive_message] == 0xab) {
+                //     received_data[j][k] = true;
+                // } else {
+                //     received_data[j][k] = false;
+                // }
+                received_data[j][k] = received_message[receive_message_no];
             }
         }
     }
@@ -241,24 +243,14 @@ extern "C" bool** Hardwaredriver::getStepped() {
     // // Create a const version of the array
     // const bool** const_received_data = const_cast<const bool**>(received_data);
 
+
+    // */
+
     // return the received_data
     return received_data;
+
+    
 }
-
-// // Controller info 
-// std::string targetIP = "169.254.255.255";
-// int targetPort = 4628;
-// // Receiver info
-// int localPort = 8200;
-// int bufferSize = 1500;
-
-
-// // Size info
-// int max_rows;
-// int max_cols;
-// int num_of_controller_used;
-// int num_breakpoints;
-// int *breakpoints_length = nullptr;
 
 //////////////////////////////////////////// Hardware API for controller ////////////////////////////////////////////
 void Hardwaredriver::send_startframe(const wchar_t* targetIP, int targetPort, int controller_no) {
@@ -817,113 +809,70 @@ void Hardwaredriver::send_endframe(const wchar_t* targetIP, int targetPort, int 
 }
 
 ////////////////////////////////////////////// Hardware API for receiver ///////////////////////////////////////////
-vector<unsigned char> Hardwaredriver::receiveMessage(int localport, int bufferSize) {
+
+// /*
+vector<int> Hardwaredriver::receiveBroadcastSignal(int BROADCAST_PORT, int BUFFER_SIZE) {
+    std::vector<int> signalData;
+
+    // Initialize Winsock
     WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
-    {
-        cout << "Failed to initialize winsock" << endl;
-        return {};
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        std::cerr << "Error initializing Winsock" << std::endl;
+        return signalData;
     }
 
-    // Creating socket
-    SOCKET serverSocket = socket(AF_INET, SOCK_DGRAM, 0);
-    if (serverSocket == INVALID_SOCKET)
-    {
-        cout << "Failed to create socket" << endl;
+    // Create a UDP socket
+    SOCKET sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sockfd == INVALID_SOCKET) {
+        std::cerr << "Error creating socket" << std::endl;
         WSACleanup();
-        return {};
+        return signalData;
     }
 
-    // Set socket option to enable broadcast
-    int broadcastOption = 1;
-    if (setsockopt(serverSocket, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<char*>(&broadcastOption), sizeof(broadcastOption)) == SOCKET_ERROR)
-    {
-        cout << "Failed to set socket option" << endl;
-        closesocket(serverSocket);
+    // Set socket options for broadcast
+    BOOL broadcastEnable = TRUE;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, (char*)&broadcastEnable, sizeof(broadcastEnable)) == SOCKET_ERROR) {
+        std::cerr << "Error setting socket options for broadcast" << std::endl;
+        closesocket(sockfd);
         WSACleanup();
-        return {};
+        return signalData;
     }
 
-    // Specifying the server address
-    sockaddr_in serverAddress;
-    serverAddress.sin_family = AF_INET;
-    serverAddress.sin_port = htons(localport);
-    serverAddress.sin_addr.s_addr = INADDR_ANY;
-
-    // Binding socket
-    if (bind(serverSocket, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) == SOCKET_ERROR)
-    {
-        cout << "Failed to bind socket" << endl;
-        closesocket(serverSocket);
+    // Bind the socket to a specific port
+    struct sockaddr_in servaddr;
+    memset(&servaddr, 0, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    servaddr.sin_port = htons(BROADCAST_PORT);
+    if (bind(sockfd, (struct sockaddr*)&servaddr, sizeof(servaddr)) == SOCKET_ERROR) {
+        std::cerr << "Error binding socket" << std::endl;
+        closesocket(sockfd);
         WSACleanup();
-        return {};
+        return signalData;
     }
 
-    // Receiving data
-    char buffer[bufferSize];
-    memset(buffer, 0, sizeof(buffer));
-    sockaddr_in clientAddress;
-    int clientAddressLength = sizeof(clientAddress);
-    int bytesReceived = recvfrom(serverSocket, buffer, sizeof(buffer), 0,
-                                reinterpret_cast<sockaddr*>(&clientAddress), &clientAddressLength);
-    if (bytesReceived == SOCKET_ERROR)
-    {
-        cout << "Failed to receive data" << endl;
-        closesocket(serverSocket);
+    // Receive the broadcast signal
+    char buffer[BUFFER_SIZE];
+    struct sockaddr_in cliaddr;
+    int len = sizeof(cliaddr);
+    int n = recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr*)&cliaddr, &len);
+    if (n == SOCKET_ERROR) {
+        std::cerr << "Error receiving broadcast signal" << std::endl;
+        closesocket(sockfd);
         WSACleanup();
-        return {};
+        return signalData;
     }
 
-    // Convert the received data into a vector of unsigned characters
-    vector<unsigned char> receivedData(buffer, buffer + bytesReceived);
+    // Process the received signal data
+    for (int i = 0; i < n; i++) {
+        signalData.push_back(static_cast<int>(buffer[i]));
+    }
 
-    // Closing the socket
-    closesocket(serverSocket);
+    // Close the socket and clean up Winsock
+    closesocket(sockfd);
     WSACleanup();
 
-    return receivedData;
+    return signalData;
 }
 
-
-
-/*
-
-int main() {
-    std::random_device rd;
-    std::mt19937 gencolor(rd());
-    std::uniform_int_distribution<> dis(0,2);
-
-    // Create a 2D dynamic array with all values set to 0
-    int** input_colorframe = new int*[5];
-    for (int i = 0; i < 5; ++i) {
-        input_colorframe[i] = new int[8];
-        for (int j = 0; j < 8; ++j) {
-            // random from 0 to 2
-            input_colorframe[i][j] = dis(gencolor);
-        }
-    }
-
-    // // Print the array
-    // for (int i = 0; i < 5; ++i) {
-    //     for (int j = 0; j < 8; ++j) {
-    //         std::cout << input_colorframe[i][j] << " ";
-    //     }
-    //     std::cout << std::endl;
-    // }
-
-    int num_breakpoints = 3;
-    int* breakpoints_length = new int[num_breakpoints]{2, 3, 3};
-    int max_rows = 5; // N -> vertical how many
-    int max_cols = 8; // M -> horizontal how many, i.e. 
-    int controller_used = 3;
-
-    Hardwaredriver hardwaredriver(controller_used, max_rows, max_cols, breakpoints_length, num_breakpoints);
-
-    // send broadcast
-    hardwaredriver.send_broadcast(4628);
-    hardwaredriver.displayFrame(input_colorframe);
-
-    return 0;
-}
-
-*/
+// */

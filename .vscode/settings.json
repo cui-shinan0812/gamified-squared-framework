@@ -1,6 +1,8 @@
 {
     "files.associations": {
+        "cstddef": "cpp",
         "ostream": "cpp",
+        "vector": "cpp",
         "array": "cpp",
         "atomic": "cpp",
         "bit": "cpp",
@@ -14,7 +16,6 @@
         "condition_variable": "cpp",
         "csignal": "cpp",
         "cstdarg": "cpp",
-        "cstddef": "cpp",
         "cstdint": "cpp",
         "cstdio": "cpp",
         "cstdlib": "cpp",
@@ -25,7 +26,6 @@
         "deque": "cpp",
         "string": "cpp",
         "unordered_map": "cpp",
-        "vector": "cpp",
         "exception": "cpp",
         "algorithm": "cpp",
         "functional": "cpp",
@@ -56,6 +56,5 @@
         "streambuf": "cpp",
         "thread": "cpp",
         "typeinfo": "cpp"
-    },
-    "C_Cpp.errorSquiggles": "disabled"
+    }
 }
