@@ -14,10 +14,12 @@ create a object of the hardware class
 HardwareClassName hardwareObject = None;
 */
 
+#include <WinSock2.h>
 #include "hardwareapi.h"
 #define UNITY_EXPORTS
-#include "middleWaredll.h"
+#include "middleWare.h"
 #include <iostream>
+
 
 Hardwaredriver* instance = nullptr;
 
@@ -79,6 +81,16 @@ T** returnUnityMatrix(const T* const* hardwareMatrix) {
         return nullptr;
     }
 
+    // // print hardwareMatrix
+    // cout << " Start hardwareMatrix: " << endl;
+    // for (int i = 0; i < maxLength; ++i) {
+    //     for (int j = 0; j < numberOfPorts; ++j) {
+    //         cout << hardwareMatrix[i][j] << " ";
+    //     }
+    //     cout << endl;
+    // }
+    // cout << " End hardwareMatrix: " << endl;
+
     // Allocate memory for unity matrix
     T** unityMatrix = new T*[M];
     for (int i = 0; i < M; ++i) {
@@ -93,6 +105,16 @@ T** returnUnityMatrix(const T* const* hardwareMatrix) {
             }
         }
     }
+
+    // // print unityMatrix
+    // cout << " Start unityMatrix: " << endl;
+    // for (int i = 0; i < M; ++i) {
+    //     for (int j = 0; j < N; ++j) {
+    //         cout << unityMatrix[i][j] << " ";
+    //     }
+    //     cout << endl;
+    // }
+    // cout << " End unityMatrix: " << endl;
 
     return unityMatrix;
 }
@@ -113,7 +135,7 @@ T** returnUnityMatrix(const T* const* hardwareMatrix) {
 /***
 @param configMap: 2D array for string (i.e. char)
 */
-UNITY_API void init(int m, int n, int numPorts, int length, int controller_used, int* portsDistribution ,const char*** configMap) {
+void init(int m, int n, int numPorts, int length, int controller_used, int* portsDistribution ,const char*** configMap) {
     M = m;
     N = n;
     numberOfPorts = numPorts; // how many ports are used in total
@@ -146,7 +168,7 @@ UNITY_API void init(int m, int n, int numPorts, int length, int controller_used,
     // Receiver info
     int localPort = 8200;
     int bufferSize = 1500;
-    int num_breakpoints = 1;
+    int num_breakpoints = controller_used;
 
     instance = new Hardwaredriver(controller_used, maxLength, numPorts, portsDistribution, 
                                     num_breakpoints, targetIP, targetPort, localPort, bufferSize);
@@ -220,7 +242,7 @@ UNITY_API void init(int m, int n, int numPorts, int length, int controller_used,
     // cout << "after initialize" << endl;
 }
 
-UNITY_API void destroy() {
+void destroy() {
     // Deallocate memory for unityToHardwareMap
     if (unityToHardwareMap != nullptr) {
         for (int i = 0; i < M; ++i) {
@@ -251,17 +273,17 @@ UNITY_API void destroy() {
     maxLength = 0;
 }
 
-UNITY_API void displayFrameUnity(int const* const* frame) {
+void displayFrameUnity(int const* const* frame) {
     int** hardwareMatrix = returnHardwareMatrix(frame);
 
-    // Print hardwareMatrix
-    // cout << "hardwareMatrix: " << endl;
-    for (int i = 0; i < maxLength; ++i) {
-        for (int j = 0; j < numberOfPorts; ++j) {
-            cout << hardwareMatrix[i][j] << " ";
-        }
-        cout << endl;
-    }
+    // // Print hardwareMatrix
+    // // cout << "hardwareMatrix: " << endl;
+    // for (int i = 0; i < maxLength; ++i) {
+    //     for (int j = 0; j < numberOfPorts; ++j) {
+    //         cout << hardwareMatrix[i][j] << " ";
+    //     }
+    //     cout << endl;
+    // }
 
     /*
     XXX: TO BE IMPLEMENTED
@@ -273,13 +295,26 @@ UNITY_API void displayFrameUnity(int const* const* frame) {
     // cout << "finished" << endl;
 }
 
-UNITY_API bool ** getSensors() {
-    bool** hardwareMatrix;
+// bool ** getSensors() {
+//     bool** hardwareMatrix;
+//     /*
+//     XXX: TO BE IMPLEMENTED
+//     call the hardware function to get the sensors
+//     */
+//     hardwareMatrix = instance->getStepped();
+
+//     return returnUnityMatrix(hardwareMatrix);
+// }
+
+int ** getSensors(int const* const* hardwareMatrix) {
+    //bool** hardwareMatrix = unityMatrix;
+
     /*
     XXX: TO BE IMPLEMENTED
     call the hardware function to get the sensors
     */
-    hardwareMatrix = instance->getStepped();
+
+    //hardwareMatrix = instance->getStepped();
 
     return returnUnityMatrix(hardwareMatrix);
 }

@@ -18,8 +18,7 @@ public:
     void displayFrame(int** input_colorframe);
     void send_broadcast(const wchar_t* broadcastIP, int targetPort);
     bool** getStepped();
-    // const bool** getStepped();
-    
+    // const bool** getStepped();    
 
 private:
     std::string targetIP;
@@ -38,6 +37,7 @@ private:
                                         int** input_colorframe, int rows, int cols);
     void send_endframe(const wchar_t* targetIP, int targetPort, int controller_no);
     vector<int> receiveBroadcastSignal(int BROADCAST_PORT, int BUFFER_SIZE);
+    
 };
 
 #endif
