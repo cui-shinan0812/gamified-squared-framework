@@ -7,7 +7,7 @@ int*** unityToHardwareMap = nullptr;
 int*** hardwareToUnityMap = nullptr;
 
 /*
-XXX: Make the hardware class singleton?
+XXX: Make the hardware class singleton? -> No Need
 
 XXX: TO BE IMPLEMENTED
 create a object of the hardware class
@@ -28,9 +28,6 @@ Hardwaredriver* instance = nullptr;
     THESE FUNCTIONS ARE NOT TO BE CALLED BY UNITY
 ======================================================
 */
-
-// import the hardware class
-
 
 // Function to get port index from a character code
 int getPortIndex(const char* code) {
@@ -276,15 +273,6 @@ void destroy() {
 void displayFrameUnity(int const* const* frame) {
     int** hardwareMatrix = returnHardwareMatrix(frame);
 
-    // // Print hardwareMatrix
-    // // cout << "hardwareMatrix: " << endl;
-    // for (int i = 0; i < maxLength; ++i) {
-    //     for (int j = 0; j < numberOfPorts; ++j) {
-    //         cout << hardwareMatrix[i][j] << " ";
-    //     }
-    //     cout << endl;
-    // }
-
     /*
     XXX: TO BE IMPLEMENTED
     call the hardware function to display the frame
@@ -306,7 +294,11 @@ void displayFrameUnity(int const* const* frame) {
 //     return returnUnityMatrix(hardwareMatrix);
 // }
 
-int ** getSensors(int const* const* hardwareMatrix) {
+
+
+// Unity input a 2d dynamic array of int of hardware matrix (ie maximum tiles * maximum ports)
+// the middleWare will convert it to unity matrix (ie M * N)
+bool ** getSensors(bool const* const* hardwareMatrix) {
     //bool** hardwareMatrix = unityMatrix;
 
     /*

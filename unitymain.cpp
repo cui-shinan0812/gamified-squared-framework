@@ -5,6 +5,8 @@ using namespace std;
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 
+
+// This is a simple testing program for the middleAPI and hardwareAPI
 int main() {
     const int M = 4;
     const int N = 4;

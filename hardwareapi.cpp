@@ -1,3 +1,8 @@
+/*
+ * This file contains the implementation of the Hardwaredriver class, which provides various hardware-related functionalities.
+ * The class includes methods for initializing hardware, displaying frames, sending broadcast messages, and receiving data.
+ */
+
 #include <iostream>
 #include <string>
 #include <cstring>
@@ -16,28 +21,31 @@ int max_rows = 5; // N
 int max_cols = 8; // M
 */
 
-
+// Initialize the hardware driver with the given parameters
 Hardwaredriver::Hardwaredriver(int controller_used, int rows, int cols, int *breakpoints, int num_breakpoints, string targetIP, int targetPort,
                                 int localPort, int bufferSize)
 {
-    num_of_controller_used = controller_used;
-    max_rows = rows;
-    max_cols = cols;
-    breakpoints_length = new int[num_breakpoints];
+    num_of_controller_used = controller_used; // number of controller used
+    max_rows = rows; // Maximum number of pixel that a port can have among all controllers
+    max_cols = cols; // Number of ports that are used
+    breakpoints_length = new int[num_breakpoints]; // Array to store the number of pixels for each controller
     for (int i = 0; i < num_breakpoints; i++) {
         breakpoints_length[i] = breakpoints[i]; 
     }
     
-    this->num_breakpoints = num_breakpoints;  
-    this->targetIP = targetIP;
-    this->targetPort = targetPort;
-    this->localPort = localPort;
-    this->bufferSize = bufferSize;
+    this->num_breakpoints = num_breakpoints; // Eg, 2 controllers there are 2 breakpoints
+    this->targetIP = targetIP; // 169.254.255.255
+    this->targetPort = targetPort; // 4628
+    this->localPort = localPort; // 8200 (no use in the dll)
+    this->bufferSize = bufferSize; // 1500, the length of the message (no use in the dll)
 }
 
-/////////////////////////////////////////// Hardware API for controller //////////////////////////////////////////////
+/////////////////////////////////////////// Hardware API for controller (Called by middelAPI) //////////////////////////////////////////////
 void Hardwaredriver::displayFrame(int** input_colorframe) {
 
+    // Input is the whole color frame 2D array
+
+    // init all the temp variables
     int temp_start = 0;
     int controller_no = 0;
     int start_and_end = 0;
@@ -45,11 +53,12 @@ void Hardwaredriver::displayFrame(int** input_colorframe) {
 
     // print "num_breakpoints: " << num_breakpoints << endl;
     // cout << "num_of_controller_used: " << num_of_controller_used << endl;
-    cout << "num_breakpoints: " << num_breakpoints << endl;
+    // cout << "num_breakpoints: " << num_breakpoints << endl;
 
+    // Send start frame message to state the start of a frame message
     send_startframe(std::wstring(targetIP.begin(), targetIP.end()).c_str(), targetPort, start_and_end);
 
-    
+    // Break the 2D array into smaller arrays based on the breakpoints, then send the control signals
     for (int i = 0; i < num_breakpoints; i++) {
         int** broken_frames = new int*[max_rows];
         for (int j = 0; j < max_rows; j++) {
@@ -60,7 +69,7 @@ void Hardwaredriver::displayFrame(int** input_colorframe) {
             }
         }
 
-        /*
+        // /*
         // print broken_frames
         for (int j = 0; j < max_rows; j++) {
             for (int k = 0; k < breakpoints_length[i]; k++) {
@@ -68,7 +77,7 @@ void Hardwaredriver::displayFrame(int** input_colorframe) {
             }
             std::cout << std::endl;
         }
-        */
+        // */
 
         // cout << "Inside display frame: targetIP: " << targetIP << endl;
         send_controlnum(std::wstring(targetIP.begin(), targetIP.end()).c_str(), targetPort, 
@@ -80,10 +89,10 @@ void Hardwaredriver::displayFrame(int** input_colorframe) {
         controller_no++;
     }
 
+    // Send end frame message to state the end of a frame message
     send_endframe(std::wstring(targetIP.begin(), targetIP.end()).c_str(), targetPort, start_and_end);
-    
-
 }
+
 
 void Hardwaredriver::send_broadcast(const wchar_t* broadcastIP, int targetPort) {
     WSADATA wsaData;
@@ -131,11 +140,13 @@ void Hardwaredriver::send_broadcast(const wchar_t* broadcastIP, int targetPort) 
         return;
     }
 
-    // print broadcastr IP 
-    std::cout << "broadcast IP: " << broadcastIP << std::endl;
+    /*
+    ======================================================
+        THE COMMAND TO SEND BROADCAST MESSAGE
+    ======================================================
+    */
 
     // Define the command buffer
-    // unsigned char command[23];
     std::vector<unsigned char> command;
 
     // Add the command
@@ -195,6 +206,7 @@ void Hardwaredriver::send_broadcast(const wchar_t* broadcastIP, int targetPort) 
     
     std::string message(reinterpret_cast<char*>(command.data()), command.size());
 
+    // The line below is sending the message
     if (sendto(sockfd, message.c_str(), message.length(), 0, (struct sockaddr*)&servaddr, sizeof(servaddr)) == SOCKET_ERROR) {
         std::cerr << "Failed to send broadcast message" << std::endl;
         closesocket(sockfd);
@@ -215,6 +227,7 @@ void Hardwaredriver::send_broadcast(const wchar_t* broadcastIP, int targetPort) 
 ////////////////////////////////////////////// Hardware API for receiver ///////////////////////////////////////////
 // vector<unsigned char> receiveMessage(int localport, int bufferSize)
 // return a vecotr of unsigned char for about  1315 bytes
+// Update: Will not call by unity
 bool** Hardwaredriver::getStepped() {
 
     // Create a 2D dynamic array to store the received data where all are false
@@ -273,7 +286,9 @@ bool** Hardwaredriver::getStepped() {
     
 }
 
-//////////////////////////////////////////// Hardware API for controller ////////////////////////////////////////////
+
+
+//////////////////////////// Hardware API for controller (Not directly called by middleAPI) ////////////////////////////////////////////
 void Hardwaredriver::send_startframe(const wchar_t* targetIP, int targetPort, int controller_no) {
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -306,6 +321,12 @@ void Hardwaredriver::send_startframe(const wchar_t* targetIP, int targetPort, in
         WSACleanup();
         return;
     }
+
+    /*
+    ======================================================
+        THE COMMAND TO SEND START FRAME MESSAGE
+    ======================================================
+    */
 
     std::vector<unsigned char> command;
 
@@ -405,12 +426,6 @@ void Hardwaredriver::send_controlnum(const wchar_t* targetIP, int targetPort, in
 
     std::vector<unsigned char> command; // Use vector for dynamic size
 
-    // std::stringstream stream;
-    // stream << std::hex << std::setw(4) << std::setfill('0') << pixelNum;
-    // std::string pixelNumHex = stream.str();
-    // // print out pixelNumHex
-    // std::cout << "pixelNumHex: " << pixelNumHex << std::endl;
-
     // Define the command to send
     command.push_back(0x90);
 
@@ -456,35 +471,14 @@ void Hardwaredriver::send_controlnum(const wchar_t* targetIP, int targetPort, in
         command.push_back(static_cast<unsigned char>(max_rows & 0xFF));
     }
 
-    // Fill in remaining 4 port pixel number with 0x00
+    // Fill in remaining 4 port pixel number with 0x0000 (The controller can have up to 8 ports)
+    // If want to use more ports, adjust the loop by uncommenting
     for (int i = 0; i < 8 - no_of_port_used; ++i) {
         command.push_back(0x00);
         command.push_back(0x00);
+        // command.push_back(static_cast<unsigned char>((max_rows >> 8) & 0xFF));
+        // command.push_back(static_cast<unsigned char>(max_rows & 0xFF));
     }
-
-    // // Port 1 pixel number
-    // command.push_back(0x00);
-    // command.push_back(0x02);
-    // // command.push_back(static_cast<unsigned char>((pixelNum >> 8) & 0xFF));
-    // // command.push_back(static_cast<unsigned char>(pixelNum & 0xFF));
-
-    // // Port 2 pixel number
-    // // command.push_back(static_cast<unsigned char>((pixelNum >> 8) & 0xFF));
-    // // command.push_back(static_cast<unsigned char>(pixelNum & 0xFF));
-    // command.push_back(0x00);
-    // command.push_back(0x02);
-
-    // // Port 3 pixel number
-    // // command.push_back(static_cast<unsigned char>((pixelNum >> 8) & 0xFF));
-    // // command.push_back(static_cast<unsigned char>(pixelNum & 0xFF));
-    // command.push_back(0x00);
-    // command.push_back(0x00);
-
-    // // Port 4 pixel number
-    // // command.push_back(static_cast<unsigned char>((pixelNum >> 8) & 0xFF));
-    // // command.push_back(static_cast<unsigned char>(pixelNum & 0xFF));
-    // command.push_back(0x00);
-    // command.push_back(0x00);
 
     // Total length
     command.push_back(0x00);
@@ -542,6 +536,12 @@ void Hardwaredriver::send_controllight_oneframe(const wchar_t* targetIP, int tar
         return;
     }
 
+    /*
+    ======================================================
+        THE COMMAND TO SEND CONTROL LIGHT ONE FRAME
+    ======================================================
+    */
+
     std::vector<unsigned char> command;
 
     // Define the command to send
@@ -555,6 +555,7 @@ void Hardwaredriver::send_controllight_oneframe(const wchar_t* targetIP, int tar
         command.push_back(static_cast<unsigned char>(dis(gen)));
     }
 
+    // 8 is the number of ports of a controller, 3 is the number of byte to represent colors 
     int controllength = 8 * 3 * rows; // total length for light signal
     int validlength = controllength + 9; // 有效長度
 
@@ -588,24 +589,7 @@ void Hardwaredriver::send_controllight_oneframe(const wchar_t* targetIP, int tar
     command.push_back(static_cast<unsigned char>((controllength >> 8) & 0xFF));
     command.push_back(static_cast<unsigned char>(controllength & 0xFF));
 
-
-    // command.insert(command.end(), {0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    //                                 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-    //                                 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
-
-    // command.insert(command.end(), {0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    //                                 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-    //                                 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
-
-    // command.insert(command.end(), {0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00,
-    //                                 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 
-    //                                 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00});
-
-    // command.insert(command.end(), {0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00,
-    //                                 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 
-    //                                 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00});
-
-    // Create vectors for color use
+    // Create vectors for color use, can add more colors if needed
     std::vector<unsigned char> green = {0xff, 0x00, 0x00};
     std::vector<unsigned char> red = {0x00, 0xff, 0x00};
     std::vector<unsigned char> blue = {0x00, 0x00, 0xff};
@@ -678,6 +662,8 @@ void Hardwaredriver::send_controllight_oneframe(const wchar_t* targetIP, int tar
 
                 }
 
+                // This is used to check if the color command is correct or not
+
                 /*
                 // print tempcolor_orignal
                 for (char c : tempcolor_orignal) {
@@ -692,19 +678,9 @@ void Hardwaredriver::send_controllight_oneframe(const wchar_t* targetIP, int tar
                 tempcolor.insert(tempcolor.end(), tempcolor_orignal.begin(), tempcolor_orignal.end());
             }
 
-            // // print tempcolor
-            // for (char c : tempcolor) {
-            //     std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(static_cast<unsigned char>(c)) << " ";
-            // }
-
             // push the tempcolor to the resultcolor
             resultcolor.insert(resultcolor.end(), tempcolor.begin(), tempcolor.end());
         }
-
-    // // print resultcolor
-    // for (char c : resultcolor) {
-    //     std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(static_cast<unsigned char>(c)) << " ";
-    // }
 
     // Add the result color to the command
     command.insert(command.end(), resultcolor.begin(), resultcolor.end());
@@ -713,8 +689,6 @@ void Hardwaredriver::send_controllight_oneframe(const wchar_t* targetIP, int tar
     int totalLength = command.size() + 1;
     command.push_back(static_cast<unsigned char>((totalLength >> 8) & 0xFF));
     command.push_back(static_cast<unsigned char>(totalLength & 0xFF));
-    // command.push_back(0x00);
-    // command.push_back(0x1b);
 
     // 校檢 CRC
     unsigned char checksum = Check_sum(command.data(), command.size() - 1); // Adjusted to use vector's data method
@@ -780,9 +754,6 @@ void Hardwaredriver::send_endframe(const wchar_t* targetIP, int targetPort, int 
         command.push_back(static_cast<unsigned char>(dis(gen)));
     }
 
-    // Add fixed bytes as per original structure
-    // command.insert(command.end(), {0x00, 0x09, 0x02, 0x00, 0x00, 0x55, 0x66, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E});
-
     // 有效長度
     command.push_back(0x00);
     command.push_back(0x09);
@@ -834,6 +805,8 @@ void Hardwaredriver::send_endframe(const wchar_t* targetIP, int targetPort, int 
 }
 
 ////////////////////////////////////////////// Hardware API for receiver ///////////////////////////////////////////
+
+// No use for now, as receiver has been shifted to unity
 
 // /*
 vector<int> Hardwaredriver::receiveBroadcastSignal(int BROADCAST_PORT, int BUFFER_SIZE) {

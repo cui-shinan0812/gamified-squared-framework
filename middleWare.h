@@ -20,7 +20,7 @@ extern "C" {
     void destroy();
     void displayFrameUnity(int const* const* frame);
     // bool** getSensors();
-    int ** getSensors(int const* const* hardwareMatrix);
+    bool ** getSensors(bool const* const* hardwareMatrix);
 }
 
 #endif
