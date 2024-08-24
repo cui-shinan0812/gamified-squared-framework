@@ -1,20 +1,35 @@
+/*
+ * This file contains functions for calculating checksums and CRC values.
+ * 
+ * The Check_sum function calculates the checksum of a given data array.
+ * A checksum is a simple error-detecting code that is used to detect errors in data.
+ * The function iterates through each byte in the data array, adds the value of each byte to a running total (Out_crc), and returns the final checksum value.
+ * 
+ * The pass_word array is an array of predefined values used for CRC calculation.
+ * 
+ * The find_crc function finds the CRC value from the pass_word array using the given out_crc.
+ */
+
 #include <iostream>
 #include <iomanip>
-#include "control_functions.h"
+#include "hardwareapi.h"
 
+// Function to calculate the checksum of a given data array
 unsigned char Check_sum(unsigned char* r_d, unsigned short Len) {
     unsigned short i;
     unsigned char Out_crc = 0;
+    // Iterate through each byte in the data array and add it to Out_crc
     for (i = 0; i < Len; i++) {
         Out_crc += r_d[i];
     }
 
-    // // print the whole Out_crc out in hex format
+    // Uncomment the following line to print the checksum in hex format
     // std::cout << "Out_crc: " << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(Out_crc) << std::endl;
 
     return Out_crc;
 }
 
+// Array of predefined values used for CRC calculation
 unsigned pass_word[256]=
 {
 0x44,0xaa,0x1f,0xbf,0x6a,0x43,0x37,0x47,0x0a,0xb9,0x92,0xe3,0x9e,0xcf,0xef,0x0c, // 15
@@ -35,11 +50,12 @@ unsigned pass_word[256]=
 0x70,0x9f,0xdd,0x7f,0x69,0xce,0x58,0x48,0x39,0xaf,0x1a,0x7a,0xd3,0xac,0x23,0xed  // 255
 };
 
-// get the last two bit of out_crc, and find the corresponding value in pass_word
+// Function to find the CRC value from the pass_word array using the given out_crc
 unsigned char find_crc(unsigned char out_crc) {
     unsigned char crc = 0;
+    // Get the corresponding value from the pass_word array
     crc = pass_word[out_crc];
-    // print the crc
+    // Uncomment the following line to print the CRC value in hex format
     // std::cout << "CRC: " << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(crc) << std::endl;
     return crc;
 }
