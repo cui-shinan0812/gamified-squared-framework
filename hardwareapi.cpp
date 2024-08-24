@@ -32,6 +32,8 @@ Hardwaredriver::Hardwaredriver(int controller_used, int rows, int cols, int *bre
     for (int i = 0; i < num_breakpoints; i++) {
         breakpoints_length[i] = breakpoints[i]; 
     }
+
+    
     
     this->num_breakpoints = num_breakpoints; // Eg, 2 controllers there are 2 breakpoints
     this->targetIP = targetIP; // 169.254.255.255
